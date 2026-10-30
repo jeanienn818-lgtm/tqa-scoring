@@ -6,7 +6,9 @@ const ROOTS = ['课程','级别','识别','教学','产品','待查'];
 const ROOT_TO = {'课程':'课程产品 / 教研','级别':'定级 / 排课','识别':'模型 / 工程','教学':'Prompt / 教学策略','产品':'产品 / 工程','待查':'专家复核'};
 const DEFAULT_CFG = {roles:{}, teachers:['Kim','Leo','Max'],
   targets:{diff:[2,1], pass:[0.85,0.90], icc:[0.75,0.80], dim:[0.95,0.95]},
-  export:{module:'课中 In-Class', channel:'TQA打分', local:'非本地化 / 通用'}};
+  export:{module:'课中 In-Class', channel:'TQA打分', local:'非本地化 / 通用'},
+  review:{enabled:true, days:[2,3,4,5], daily_min:2, daily_max:5, weekly_min:10, weekly_max:20, per_scorer_min:2, levels:['Lv1','Lv2','Lv3','Lv4'], pool_days:14}};
+const WD=['','周一','周二','周三','周四','周五','周六','周日'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const f1 = v => (v==null||isNaN(v))?'—':(Math.round(v*10)/10).toFixed(1);
@@ -21,7 +23,8 @@ let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList
 
 const S = { uid:null, email:'', member:null, isAdmin:false, isOwner:false, myName:'',
   cfg:JSON.parse(JSON.stringify(DEFAULT_CFG)), mine:[], all:[], members:[], loaded:false,
-  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:''}, openRow:null, includeUnfmt:false, authMode:'login' };
+  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:''}, openRow:null, includeUnfmt:false, authMode:'login',
+  isExpert:false, tasks:[], myTasks:[], fromTask:null, cmpOpen:null, cmpData:{}, rvWeek:null };
 
 /* ---------------- data layer (Supabase) ---------------- */
 const CONF = window.TQA_CONFIG || {};
@@ -50,7 +53,13 @@ function makeApi(){
     updateMember: (email,patch) => un(sb.from('members').update(patch).eq('email',email).select()),
     deleteMember: email => un(sb.from('members').delete().eq('email',email)),
     config: async()=> { const d=await un(sb.from('app_config').select('data').eq('id',1).maybeSingle()); return d?d.data:{}; },
-    saveConfig: data => un(sb.from('app_config').update({data,updated_at:new Date().toISOString()}).eq('id',1).select())
+    saveConfig: data => un(sb.from('app_config').update({data,updated_at:new Date().toISOString()}).eq('id',1).select()),
+    reviewTasks: () => pageAll(()=>sb.from('review_tasks').select('*').order('task_date').order('created_at')),
+    myReviewTasks: () => un(sb.rpc('my_review_tasks')),
+    genReview: () => un(sb.rpc('generate_review_tasks',{p_manual:true})),
+    cancelReview: id => un(sb.rpc('cancel_review_task',{p_id:id})),
+    addReview: cls => un(sb.rpc('add_review_task',{p_class:cls})),
+    reviewCompare: id => un(sb.rpc('review_compare',{p_id:id}))
   };
 }
 function fromDb(r){ return { id:r.id, user_id:r.user_id, import_role:r.import_role, source:r.source, date:r.date, type:r.type, level:r.level, lesson:r.lesson,
@@ -68,10 +77,11 @@ function errMsg(e){ if(e&&e.friendly) return e.message; const m=(e&&(e.message||
   return m||'操作失败，请稍后再试'; }
 
 /* ---------------- routing ---------------- */
-const VIEWS=['score','mine','board','setup'];
+const VIEWS=['score','mine','review','board','setup'];
 function route(){
   let v=location.hash.slice(1); if(VIEWS.indexOf(v)<0) v='score';
   if((v==='board'||v==='setup') && !S.isAdmin) v='score';
+  if(v==='review' && !S.isAdmin && !S.isExpert) v='score';
   const signedOut=!S.uid, denied=!!S.uid&&!S.member;
   const gate=!signedOut&&!denied&&(S.needName||S.renaming);
   $('#auth').hidden=!signedOut; $('#denied').hidden=!denied; $('#gate').hidden=!gate;
@@ -80,7 +90,7 @@ function route(){
   document.querySelectorAll('[data-view]').forEach(el=>el.hidden=!show||el.dataset.view!==v);
   document.querySelectorAll('.tabs a').forEach(a=>{ if(a.dataset.v===v) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
   if(!show) return;
-  if(v==='mine') renderMine(); if(v==='board') renderBoard(); if(v==='setup') renderSetup();
+  if(v==='mine') renderMine(); if(v==='review') renderReview(); if(v==='board') renderBoard(); if(v==='setup') renderSetup();
 }
 window.addEventListener('hashchange',route);
 
@@ -116,7 +126,7 @@ function fillTeachers(sel, cur){
   if(cur!=null) sel.value=cur;
 }
 function resetForm(keepCourse){
-  S.editing=null; S.scores=Array(8).fill(null);
+  S.editing=null; S.scores=Array(8).fill(null); if(!keepCourse){ S.fromTask=null; $('#taskHint').hidden=true; }
   if(!keepCourse){ ['f-lesson','f-class','f-country','f-url'].forEach(id=>$('#'+id).value=''); $('#f-date').value=today(); }
   ['f-hl','f-issues','f-sugg','b-time','b-text'].forEach(id=>$('#'+id).value=''); $('#b-sev').checked=false;
   $('#formTitle').textContent='新建打分'; $('#btnCancelEdit').hidden=true; $('#btnSave').textContent='保存记录'; $('#dupHint').hidden=true;
@@ -156,7 +166,9 @@ async function saveForm(e){
     else saved=fromDb(await API.insertScore(Object.assign({user_id:S.uid},row)));
     const put=arr=>{ const i=arr.findIndex(r=>r.id===saved.id); if(i>=0) arr[i]=saved; else arr.push(saved); };
     put(S.mine); if(S.isAdmin) put(S.all);
-    toast(S.editing?'已保存修改':'已保存'); resetForm(false);
+    const wasTask=S.fromTask&&!S.editing;
+    toast(S.editing?'已保存修改':(wasTask?'已保存，复评任务已完成':'已保存')); resetForm(false);
+    if(wasTask){ await loadTasks(); location.hash='review'; }
   }catch(err){ toast(errMsg(err)); }
   finally{ btn.disabled=false; }
 }
@@ -370,6 +382,138 @@ function exportCsv(recs){
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
 
+/* ---------------- expert review tasks ---------------- */
+const monday = d => addDays(d, -((new Date(d+'T00:00:00').getDay()+6)%7));
+const wdOf = d => WD[((new Date(d+'T00:00:00').getDay()+6)%7)+1];
+const safeUrl = u => /^https?:\/\//i.test(u||'') ? u : '';
+function rcfg(){ return Object.assign({}, DEFAULT_CFG.review, S.cfg.review||{}); }
+async function loadTasks(){
+  if(!API||!(S.isAdmin||S.isExpert)) return;
+  try{
+    const [my,all]=await Promise.all([S.isExpert?API.myReviewTasks():null, S.isAdmin?API.reviewTasks():null]);
+    S.myTasks=my||[]; if(S.isAdmin) S.tasks=all||[];
+  }catch(e){ S.myTasks=[]; S.tasks=[]; toast('复评任务读取失败：'+errMsg(e)); }
+}
+function startTask(t){
+  resetForm(false);
+  $('#f-date').value=t.date||today(); $('#f-type').value=t.type||'体验课'; $('#f-level').value=t.level||'Lv1';
+  $('#f-lesson').value=t.lesson||''; $('#f-class').value=t.class_id||''; fillTeachers($('#f-teacher'),t.teacher||'');
+  $('#f-country').value=t.country||''; $('#f-url').value=t.url||'';
+  S.fromTask=t.id; const th=$('#taskHint'); th.hidden=false;
+  th.innerHTML=`<b>复评任务 · Class ${esc(t.class_id)}</b>：课程信息已带入，请独立看课打分。保存后任务自动完成，可在「复评」里查看和常规打分者的对比。`;
+  checkDup(); location.hash='score'; window.scrollTo(0,0);
+}
+function cmpHtml(t){
+  const d=S.cmpData[t.id]; if(!d) return '<div class="cmp">正在加载…</div>';
+  if(d.error) return `<div class="cmp">${esc(d.error)}</div>`;
+  if(!d.length) return '<div class="cmp">没有找到常规打分者对这节课的记录（可能已被删除）。</div>';
+  const pool=S.isExpert?S.mine:allRecords().filter(r=>r.role==='expert');
+  const me=pool.find(r=>r.classId===t.class_id);
+  const cols=[{n:S.isExpert?'专家（我）':'专家',s:me?me.s:[],total:me?me.total:null}]
+    .concat(d.map(x=>({n:x.who,s:(x.s||[]).map(Number),total:x.total==null?null:Number(x.total)})));
+  const e=cols[0], r=cols[1]; const df=(a,b)=>(typeof a==='number'&&typeof b==='number')?a-b:null;
+  let h=`<div class="cmp"><div class="tbl"><table><thead><tr><th>维度</th>${cols.map(c=>`<th class="num">${esc(c.n)}</th>`).join('')}<th class="num">差（打分者 − 专家）</th></tr></thead><tbody>${
+    DIMS.map((dm,i)=>{ const x=df(r.s[i],e.s[i]); return `<tr><td>${esc(dm.n)}</td>${cols.map(c=>`<td class="num">${c.s[i]==null?'—':c.s[i]}</td>`).join('')}<td class="num${x!=null&&Math.abs(x)>1?' low':''}">${x==null?'—':sgn(x).replace('.00','')}</td></tr>`; }).join('')}
+    <tr><td><b>加权总分</b></td>${cols.map(c=>`<td class="num"><b>${f1(c.total)}</b></td>`).join('')}<td class="num${df(r.total,e.total)!=null&&Math.abs(df(r.total,e.total))>5?' low':''}"><b>${df(r.total,e.total)==null?'—':sgn(df(r.total,e.total))}</b></td></tr></tbody></table></div>`;
+  if(!me) h+='<p class="hint">没找到专家对这节课的记录。</p>';
+  d.forEach(x=>{ h+=`<div style="white-space:pre-wrap"><b>${esc(x.who)} 的问题</b>\n${esc(x.issues||'—')}${x.hl?`\n<b>亮点</b>\n${esc(x.hl)}`:''}${x.sugg?`\n<b>优化建议</b>\n${esc(x.sugg)}`:''}</div>`; });
+  return h+'</div>';
+}
+function taskRow(t,isOpen){
+  const late=isOpen&&t.task_date<today(); const u=safeUrl(t.url);
+  return `<div class="task" data-tid="${esc(t.id)}"><div>
+    <div class="meta"><span class="mono"><b>Class ${esc(t.class_id)}</b></span><span>Lesson ${esc(t.lesson||'—')}</span><span>${esc(t.type||'')} · ${esc(t.level||'')}</span><span>老师 ${esc(t.teacher||'—')}</span>${t.country?`<span>${esc(t.country)}</span>`:''}<span>看课日期 ${esc(t.date||'—')}</span>${u?`<a href="${esc(u)}" target="_blank" rel="noopener">打开回放</a>`:''}</div>
+    <div class="sub">分配于 ${esc(t.task_date)}（${wdOf(t.task_date)}）${late?' <span class="pill warn">已过分配日</span>':''}${t.done_at?' · 完成于 '+esc(localDay(t.done_at)):''}</div></div>
+    <div class="row">${isOpen?'<button class="btn sm primary" type="button" data-act="start">开始打分</button>':`<button class="btn sm" type="button" data-act="cmp">${S.cmpOpen===t.id?'收起':'查看对比'}</button>`}</div>
+    ${S.cmpOpen===t.id?cmpHtml(t):''}</div>`;
+}
+function expertPart(){
+  const open=S.myTasks.filter(t=>t.status==='open'), done=S.myTasks.filter(t=>t.status==='done').sort((a,b)=>(b.done_at||'').localeCompare(a.done_at||''));
+  const td=today(), tdN=open.filter(t=>t.task_date===td).length;
+  let h=`<div class="kpis"><div class="kpi"><span class="v">${open.length}</span><span class="l">待复评（其中今天分配 ${tdN}）</span></div>
+    <div class="kpi"><span class="v">${done.filter(t=>localDay(t.done_at)>=monday(td)).length}</span><span class="l">本周已完成</span></div></div>`;
+  h+=`<div class="card"><h2>待复评<small>按分配日排序；点"开始打分"会自动带入课程信息</small></h2>${open.length?open.map(t=>taskRow(t,true)).join(''):'<div class="empty">暂时没有待复评的课。新任务会在复评日早上 7 点出现。</div>'}</div>`;
+  h+=`<div class="card"><h2>已完成<small>近 4 周；完成后可以查看常规打分者的分数和问题</small></h2>${done.length?done.map(t=>taskRow(t,false)).join(''):'<div class="empty">还没有完成的复评。</div>'}</div>`;
+  return h;
+}
+function adminPart(){
+  const C=rcfg(), td=today(), ws=S.rvWeek||monday(td), we=addDays(ws,6);
+  const all=S.tasks.filter(t=>t.week_start===ws), W=all.filter(t=>t.status!=='cancelled'), nCan=all.length-W.length;
+  const done=W.filter(t=>t.status==='done').length;
+  const regs=S.members.filter(m=>m.active&&m.compare_role==='regular'&&m.user_id);
+  const ids=[...new Set(regs.map(m=>m.user_id).concat(W.map(t=>t.scorer_id).filter(Boolean)))];
+  const experts=S.members.filter(m=>m.active&&m.compare_role==='expert');
+  const per=C.per_scorer_min, scored=uid=>S.all.filter(r=>r.user_id===uid&&localDay(r.createdAt)>=ws&&localDay(r.createdAt)<=we).length;
+  const covS=ids.filter(id=>W.filter(t=>t.scorer_id===id).length>=per).length;
+  const lvN=l=>W.filter(t=>t.level===l).length; const covL=C.levels.filter(l=>lvN(l)>0).length;
+  const isDay=C.days.indexOf(((new Date(td+'T00:00:00').getDay()+6)%7)+1)>=0;
+  let h='';
+  if(!experts.length) h+='<div class="notice"><b>还没有专家：</b>请在「设置 → 成员与权限」把专家的对比角色设为"专家"，任务才会显示给他。</div>';
+  else if(experts.length>1) h+='<div class="notice">现在有多位专家，任务不指定具体某个人，每位专家都能看到并完成。</div>';
+  if(!C.enabled) h+='<div class="notice"><b>自动生成已关闭</b>，可在「设置 → 专家复评任务」打开，或在下面手动补足。</div>';
+  h+=`<div class="card"><div class="row"><h2>本周复评<small>${esc(ws)} ～ ${esc(we)}</small></h2><span class="spacer"></span>
+    <div class="seg" role="group" aria-label="切换周"><button type="button" data-act="wk" data-d="-7">‹ 上一周</button><button type="button" data-act="wk" data-d="0" aria-pressed="${ws===monday(td)}">本周</button><button type="button" data-act="wk" data-d="7">下一周 ›</button></div></div>
+    <div class="kpis">
+      <div class="kpi"><span class="v">${W.length}</span><span class="l">已分配（目标 ${C.weekly_min}–${C.weekly_max}）</span></div>
+      <div class="kpi"><span class="v">${done}</span><span class="l">专家已完成</span></div>
+      <div class="kpi"><span class="v">${W.length-done}</span><span class="l">待完成</span></div>
+      <div class="kpi"><span class="v">${covS}/${ids.length}</span><span class="l">打分者已覆盖（每人 ≥${per} 节）</span></div>
+      <div class="kpi"><span class="v">${covL}/${C.levels.length}</span><span class="l">级别已覆盖</span></div></div>
+    <div class="two"><div class="tbl"><table><thead><tr><th>常规打分者</th><th class="num">本周打分</th><th class="num">被抽复评</th><th class="num">专家已完成</th><th>覆盖要求</th></tr></thead><tbody>${
+      ids.length?ids.map(id=>{ const n=W.filter(t=>t.scorer_id===id).length, k=W.filter(t=>t.scorer_id===id&&t.status==='done').length;
+        return `<tr><td>${esc(revName(id))}</td><td class="num">${scored(id)}</td><td class="num">${n}</td><td class="num">${k}</td><td>${n>=per?'<span class="pill good">已达到</span>':`<span class="pill warn">还差 ${per-n} 节</span>`}</td></tr>`; }).join(''):'<tr><td colspan="5">还没有对比角色为"常规打分者"的成员。</td></tr>'}</tbody></table></div>
+      <div class="field"><label>级别覆盖（全部打分者合计）</label><div class="chips">${C.levels.map(l=>{ const n=lvN(l); return `<span class="pill ${n?'good':'warn'}">${esc(l)} ${n?'× '+n:'未覆盖'}</span>`; }).join('')}</div>
+        <p class="hint" style="margin-top:8px">今天${wdOf(td)}，${isDay&&C.enabled?'是复评日，07:00 已自动生成':'不是自动复评日'}。每个复评日每天 ${C.daily_min}–${C.daily_max} 节，优先补齐还没覆盖的打分者和级别，其次是有严重问题或低分的课；候选为最近 ${C.pool_days} 天内、截止前一天保存的常规打分记录。</p>
+        <div class="row" style="margin-top:6px"><button class="btn sm primary" type="button" data-act="gen">补足今天的任务</button></div>
+        <form class="row" id="addTask" novalidate style="margin-top:6px"><input type="text" id="addCls" placeholder="Class ID" style="max-width:160px" inputmode="numeric"><button class="btn sm" type="submit">指定这节课给专家</button></form></div></div>
+    ${W.length?`<div class="tbl"><table><thead><tr><th>分配日</th><th>Class ID</th><th>Lesson</th><th>课型</th><th>级别</th><th>老师</th><th>打分者</th><th>抽取原因</th><th>状态</th><th></th></tr></thead><tbody>${
+      W.slice().sort((a,b)=>a.task_date.localeCompare(b.task_date)||(a.created_at||'').localeCompare(b.created_at||'')).map(t=>`<tr data-tid="${esc(t.id)}"><td class="mono">${esc(t.task_date.slice(5))} ${wdOf(t.task_date)}</td><td class="mono">${esc(t.class_id)}</td><td class="mono">${esc(t.lesson||'')}</td><td>${esc(t.type||'')}</td><td>${esc(t.level||'')}</td><td>${esc(t.teacher||'')}</td><td>${esc(revName(t.scorer_id||''))}</td><td>${esc(t.reason||'')}</td>
+        <td>${t.status==='done'?'<span class="pill good">已完成</span>':t.task_date<td?'<span class="pill warn">逾期未完成</span>':'<span class="pill neu">待完成</span>'}</td>
+        <td class="row" style="flex-wrap:nowrap">${t.status==='done'?`<button class="btn sm" type="button" data-act="cmp">${S.cmpOpen===t.id?'收起':'对比'}</button>`:'<button class="btn sm danger" type="button" data-act="cancel">取消</button>'}</td></tr>${S.cmpOpen===t.id?`<tr class="detail"><td colspan="10" style="white-space:normal">${cmpHtml(t)}</td></tr>`:''}`).join('')}</tbody></table></div>`:'<div class="empty">这一周还没有复评任务。</div>'}
+    ${nCan?`<p class="hint">本周另有 ${nCan} 条已取消的任务，被取消的课本周不会再被抽中。</p>`:''}</div>`;
+  return h;
+}
+function renderReview(){
+  const box=$('#reviewBody'); if(!box) return;
+  box.innerHTML=(S.isExpert?expertPart():'')+(S.isAdmin?adminPart():'');
+  const find=id=>S.tasks.find(t=>t.id===id)||S.myTasks.find(t=>t.id===id);
+  box.onclick=async e=>{
+    const b=e.target.closest('button[data-act]'); if(!b) return; const act=b.dataset.act;
+    const host=b.closest('[data-tid]'); const t=host&&find(host.dataset.tid);
+    if(act==='wk'){ const n=+b.dataset.d; S.rvWeek=n?addDays(S.rvWeek||monday(today()),n):null; renderReview(); return; }
+    if(act==='start'&&t){ startTask(t); return; }
+    if(act==='cmp'&&t){ S.cmpOpen=S.cmpOpen===t.id?null:t.id; renderReview();
+      if(S.cmpOpen&&!S.cmpData[t.id]){ try{ S.cmpData[t.id]=await API.reviewCompare(t.id); }catch(err){ S.cmpData[t.id]={error:errMsg(err)}; } renderReview(); } return; }
+    if(act==='cancel'&&t){
+      if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='确认取消'; setTimeout(()=>{ if(b.isConnected){ b.dataset.armed=''; b.textContent='取消'; } },3000); return; }
+      try{ await API.cancelReview(t.id); await loadTasks(); toast('已取消，可点"补足今天的任务"换一节'); renderReview(); }catch(err){ toast(errMsg(err)); } return; }
+    if(act==='gen'){ b.disabled=true; try{ const r=await API.genReview(); await loadTasks(); toast(r&&r.created?`已新增 ${r.created} 节，今天目标 ${r.target} 节`:`今天已经够了（目标 ${r?r.target:'—'} 节），或没有可抽的课`); renderReview(); }catch(err){ toast(errMsg(err)); b.disabled=false; } }
+  };
+  const f=$('#addTask'); if(f) f.onsubmit=async ev=>{ ev.preventDefault(); const c=$('#addCls').value.trim(); if(!c){ toast('先填 Class ID'); return; }
+    try{ await API.addReview(c); await loadTasks(); toast('已指定 Class '+c); renderReview(); }catch(err){ toast(errMsg(err)); } };
+}
+function reviewCfgCard(){
+  const R=rcfg(); const fld=(id,l,v,w)=>`<div class="field"><label for="${id}">${l}</label><input type="text" inputmode="numeric" id="${id}" value="${esc(v)}"${w?` style="max-width:${w}"`:''}></div>`;
+  return `<div class="card"><h2>专家复评任务<small>数据库每天北京时间 07:00 按这些参数给专家抽课</small></h2>
+    <div class="row" style="gap:18px"><label class="row" style="gap:6px"><input type="checkbox" id="r-en" ${R.enabled?'checked':''}> 自动生成</label>
+      <div class="days" role="group" aria-label="复评日">${[1,2,3,4,5,6,7].map(i=>`<label><input type="checkbox" data-rday="${i}" ${R.days.indexOf(i)>=0?'checked':''}> ${WD[i]}</label>`).join('')}</div></div>
+    <div class="cfgrow">${fld('r-dmin','每个复评日最少（节）',R.daily_min)}${fld('r-dmax','每个复评日最多（节）',R.daily_max)}${fld('r-wmin','每周合计最少（节）',R.weekly_min)}${fld('r-wmax','每周合计最多（节）',R.weekly_max)}${fld('r-per','每位打分者每周至少（节）',R.per_scorer_min)}${fld('r-pool','候选范围：最近几天的打分',R.pool_days)}
+      <div class="field"><label for="r-levels">每周需覆盖的级别（逗号分隔）</label><input type="text" id="r-levels" value="${esc(R.levels.join(', '))}"></div></div>
+    <p class="hint">每个复评日的数量会在"每天最少—最多"之间自动调整：把本周还差的数量（周最少、每位打分者的最低节数、未覆盖的级别）平均分到剩下的复评日。已经有专家打分、首批导入、或本周被取消过的课不会被抽中。</p></div>`;
+}
+function readReviewCfg(){
+  if(!$('#r-dmin')) return rcfg();
+  const n=id=>{ const v=parseInt($('#'+id).value,10); return isNaN(v)||v<0?null:v; };
+  const R={enabled:$('#r-en').checked, days:[...document.querySelectorAll('[data-rday]')].filter(x=>x.checked).map(x=>+x.dataset.rday),
+    daily_min:n('r-dmin'), daily_max:n('r-dmax'), weekly_min:n('r-wmin'), weekly_max:n('r-wmax'), per_scorer_min:n('r-per'), pool_days:n('r-pool'),
+    levels:$('#r-levels').value.split(/[,，、\s]+/).map(x=>x.trim()).filter(Boolean)};
+  if(['daily_min','daily_max','weekly_min','weekly_max','per_scorer_min','pool_days'].some(k=>R[k]==null)){ toast('复评参数要填 0 或正整数'); return null; }
+  if(R.daily_min>R.daily_max||R.weekly_min>R.weekly_max){ toast('复评参数：最少不能大于最多'); return null; }
+  if(R.daily_max<1||R.pool_days<1){ toast('复评参数：每天最多和候选天数至少为 1'); return null; }
+  if(R.enabled&&!R.days.length){ toast('请至少选一个复评日'); return null; }
+  return R;
+}
+
 /* ---------------- setup ---------------- */
 function renderSetup(){
   const box=$('#setupBody'); const c=S.cfg; const T=c.targets||DEFAULT_CFG.targets; const E=c.export||DEFAULT_CFG.export;
@@ -403,7 +547,9 @@ function renderSetup(){
   <div class="card"><h2>目标范围</h2><div class="tbl"><table><thead><tr><th>指标</th><th>初始阶段（暂定）</th><th>稳定阶段</th></tr></thead><tbody>
     ${[['diff','打分者 − 专家平均差（绝对值上限，分）',1],['pass','±5 分内合格率（下限，%）',100],['icc','ICC（下限）',1],['dim','维度差 ≤1 分（下限，%）',100]].map(([k,l,m])=>
       `<tr><td>${l}</td>${[0,1].map(j=>`<td><input type="text" inputmode="decimal" id="t-${k}-${j}" value="${Math.round(T[k][j]*m*100)/100}" style="max-width:110px"></td>`).join('')}</tr>`).join('')}
-  </tbody></table></div><p class="hint">老师名单、导出字段和目标范围改完后点右上角"保存设置"；成员的修改会立即生效。</p></div>`;
+  </tbody></table></div></div>
+  ${reviewCfgCard()}
+  <p class="hint">老师名单、导出字段、目标范围和复评参数改完后点右上角"保存设置"；成员的修改会立即生效。</p>`;
   $('#addMem').onsubmit=addMember;
   box.querySelectorAll('tr[data-email] [data-f]').forEach(el=>el.addEventListener('change',()=>{
     const email=el.closest('tr').dataset.email, f=el.dataset.f; let v=el.value;
@@ -441,6 +587,7 @@ async function saveCfg(){
   const num=(id,m)=>{ const v=parseFloat(($('#'+id)||{}).value); return isNaN(v)?null:v/m; };
   const T={}; [['diff',1],['pass',100],['icc',1],['dim',100]].forEach(([k,m])=>{ T[k]=[num('t-'+k+'-0',m),num('t-'+k+'-1',m)].map((v,j)=>v==null?DEFAULT_CFG.targets[k][j]:v); });
   c.targets=T;
+  const R=readReviewCfg(); if(!R) return; c.review=R;
   try{ await API.saveConfig(c); S.cfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_CFG)),c); fillTeachers($('#f-teacher'),$('#f-teacher').value); toast('设置已保存'); }catch(e){ toast(errMsg(e)); }
 }
 
@@ -493,7 +640,9 @@ async function afterLogin(session){
   if(!S.member){ $('#deniedText').textContent=`你登录的邮箱是 ${S.email}，还不在打分名单里，或已被停用。请联系管理员后重新登录。`; paintWho(); route(); return; }
   S.isAdmin=!!S.member.is_admin; S.isOwner=!!S.member.is_owner; S.myName=S.member.name||(S.isOwner?'管理员':''); S.needName=!S.myName;
   if(S.needName){ $('#gateTitle').textContent=S.isAdmin?'你是管理员，请先填写名字以便区分':'开始打分前，请先填写你的名字'; $('#g-cancel').hidden=true; $('#g-save').textContent='开始打分'; }
+  S.isExpert=S.member.compare_role==='expert';
   document.querySelectorAll('.tabs a[data-v="board"],.tabs a[data-v="setup"]').forEach(a=>a.hidden=!S.isAdmin);
+  document.querySelector('.tabs a[data-v="review"]').hidden=!(S.isAdmin||S.isExpert);
   try{ S.cfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_CFG)),(await API.config())||{}); }catch(_){}
   fillTeachers($('#f-teacher'),(S.cfg.teachers||[])[0]||'');
   await loadData(); paintWho(); route();
@@ -503,8 +652,10 @@ async function loadData(){
     if(S.isAdmin){ const [rows,mem]=await Promise.all([API.scores(null),API.members()]); S.all=rows.map(fromDb); S.members=mem; S.mine=S.all.filter(r=>r.user_id===S.uid); }
     else { S.mine=(await API.scores(S.uid)).map(fromDb); }
   }catch(e){ toast(errMsg(e)); }
+  await loadTasks();
 }
-function clearState(){ Object.assign(S,{uid:null,email:'',member:null,isAdmin:false,isOwner:false,myName:'',mine:[],all:[],members:[],needName:false,renaming:false,editing:null}); }
+function clearState(){ Object.assign(S,{uid:null,email:'',member:null,isAdmin:false,isOwner:false,isExpert:false,myName:'',mine:[],all:[],members:[],needName:false,renaming:false,editing:null,tasks:[],myTasks:[],fromTask:null,cmpOpen:null,cmpData:{}});
+  document.querySelector('.tabs a[data-v="review"]').hidden=true; }
 async function logout(){ try{ await API.signOut(); }catch(_){} clearState(); resetForm(false); paintWho(); location.hash='score'; route(); }
 async function boot(){
   buildDims(); fillTeachers($('#f-teacher'),'Kim'); resetForm(false); setAuthMode('login');
@@ -517,6 +668,7 @@ async function boot(){
   $('#q-type').onchange=()=>{ S.filter.type=$('#q-type').value; renderBoard(); };
   $('#q-rev').onchange=()=>{ S.filter.rev=$('#q-rev').value; renderBoard(); };
   $('#btnSaveCfg').onclick=saveCfg;
+  $('#btnReviewRefresh').onclick=async()=>{ const b=$('#btnReviewRefresh'); b.disabled=true; await loadData(); b.disabled=false; renderReview(); toast('已刷新'); };
   $('#btnRefresh').onclick=async()=>{ const b=$('#btnRefresh'); b.disabled=true; await loadData(); b.disabled=false; renderBoard(); toast('已刷新'); };
   $('#gateForm').addEventListener('submit',submitGate);
   $('#g-cancel').onclick=()=>{ S.renaming=false; route(); };
