@@ -63,7 +63,7 @@ function makeApi(){
   };
 }
 function fromDb(r){ return { id:r.id, user_id:r.user_id, import_role:r.import_role, source:r.source, date:r.date, type:r.type, level:r.level, lesson:r.lesson,
-  classId:r.class_id, teacher:r.teacher, country:r.country, done:r.done, camera:r.camera, url:r.url, s:(r.s||[]).map(Number),
+  classId:r.class_id, teacher:r.teacher, country:r.country, done:r.done, camera:r.camera, url:r.url, s:r.s?r.s.map(Number):Array(8).fill(null), archived:!r.s,
   total:r.total==null?null:Number(r.total), hl:r.hl, issues:r.issues, sugg:r.sugg,
   createdAt:r.source==='首批导入'?null:r.created_at, updatedAt:r.updated_at }; }
 function errMsg(e){ if(e&&e.friendly) return e.message; const m=(e&&(e.message||e.error_description))||''; 
@@ -191,7 +191,7 @@ function renderMine(){
   if(!rows.length){ box.innerHTML='<div class="empty">还没有记录。到"打分"页填写第一节课，保存后会出现在这里。</div>'; return; }
   box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
     rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
-      (r.s||[]).map(v=>`<td class="num${v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total<60?' low':''}"><b>${f1(r.total)}</b></td><td class="num">${countLines(r.issues)}</td>
+      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td><td class="num">${countLines(r.issues)}</td>
       <td class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="edit" type="button">编辑</button><button class="btn sm danger" data-act="del" type="button">删除</button></td></tr>
       ${S.openRow===r.id?`<tr class="detail"><td colspan="17">${detailText(r)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
   box.onclick=async e=>{
@@ -335,7 +335,7 @@ function renderBoard(){
   h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看亮点和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="csv">导出 CSV</button></div>
     <div class="tbl"><table><thead><tr><th>看课日期</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
     recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td class="mono">${esc(r.date)}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
-      (r.s||[]).map(v=>`<td class="num${v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total<60?' low':''}"><b>${f1(r.total)}</b></td></tr>${S.openRow===k?`<tr class="detail"><td colspan="16">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
+      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="16">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
     ${recs.length>400?`<p class="hint">只显示最近 400 条；导出 CSV 包含全部 ${recs.length} 条。</p>`:''}</div>`;
   box.innerHTML=h;
   const ax=$('#progAxis'); if(ax) ax.onclick=e=>{ const b=e.target.closest('button'); if(b){ S.progAxis=b.dataset.a; renderBoard(); } };

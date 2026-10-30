@@ -5,6 +5,16 @@
 -- 看板里的一致性就按 Class ID 配对计算。
 -- 参数在 app_config.data.review 里（网页「设置 → 专家复评任务」可改），缺省值见 review_cfg()。
 
+-- ============ 允许"仅留档"记录（没有维度分数，不参与任何分数计算）============
+alter table public.scores alter column s drop not null;
+alter table public.scores drop constraint if exists scores_s_check;
+alter table public.scores add constraint scores_s_check check (s is null or array_length(s,1) = 8);
+-- 打分者也能编辑管理员替他导入的历史记录
+drop policy if exists s_update on public.scores;
+create policy s_update on public.scores for update to authenticated
+  using (user_id = (select auth.uid()) and public.is_member())
+  with check (user_id = (select auth.uid()) and import_role is null and source in ('web','历史导入'));
+
 -- ============ 表 ============
 create table if not exists public.review_tasks (
   id          uuid primary key default gen_random_uuid(),
@@ -115,7 +125,7 @@ begin
       (s.total < 60 or exists(select 1 from unnest(s.s) v where v < 6))::int as low,
       (s.created_at at time zone 'Asia/Shanghai')::date as scored
     from scores s join members m on m.user_id = s.user_id and m.active and m.compare_role = 'regular'
-    where s.source = 'web'
+    where s.import_role is null and s.s is not null and s.total is not null
       and (s.created_at at time zone 'Asia/Shanghai')::date < d
       and (s.created_at at time zone 'Asia/Shanghai')::date >= d - pool
       and not exists(select 1 from review_tasks t where t.class_id = s.class_id and (t.status <> 'cancelled' or t.week_start = ws))
