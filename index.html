@@ -129,6 +129,15 @@ tr.detail td{background:var(--sunk);white-space:pre-wrap;font-size:12.5px}
 .who .nm{color:var(--fg);font-weight:600}
 .barc{display:flex;align-items:center;gap:8px}.barc i{display:block;height:8px;border-radius:4px;background:var(--accent);opacity:.75}
 td.zero{color:var(--faint)}.mx td.num{min-width:34px}
+.task{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+.task:first-of-type{border-top:0;padding-top:0}
+.task .meta{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:13px}.task .meta span{white-space:nowrap}
+.task .sub{font-size:12px;color:var(--faint)}
+.cmp{grid-column:1/-1;background:var(--sunk);border-radius:8px;padding:10px 12px;font-size:12.5px;display:flex;flex-direction:column;gap:8px}
+.cmp table{background:var(--surface)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.cfgrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px}
+.days{display:flex;gap:4px;flex-wrap:wrap}.days label{display:flex;align-items:center;gap:3px;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--sunk);color:var(--muted);margin-left:4px}
 </style>
 </head><body>
@@ -137,6 +146,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
   <nav class="tabs" aria-label="页面" id="tabs" hidden>
     <a href="#score" data-v="score">打分</a>
     <a href="#mine" data-v="mine">我的记录</a>
+    <a href="#review" data-v="review" hidden>复评</a>
     <a href="#board" data-v="board" hidden>看板</a>
     <a href="#setup" data-v="setup" hidden>设置</a>
   </nav>
@@ -203,6 +213,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
           <div class="field" style="grid-column:1/-1"><label for="f-url">回放链接</label><input type="url" id="f-url" placeholder="https://"></div>
         </div>
         <p class="hint" id="dupHint" hidden></p>
+        <p class="notice" id="taskHint" hidden></p>
       </div>
 
       <div class="card" id="dims"><h2>8 维打分<small>点开"评分要点"可查看检查项和分档</small></h2></div>
@@ -241,6 +252,13 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
     <div class="kpis" id="mineStats"></div>
     <div id="mineBody"></div>
     <div class="card"><h2>修改密码</h2><form id="pwForm" class="row" novalidate><input type="password" id="p-new" placeholder="新密码，至少 8 位" autocomplete="new-password" style="flex:1;min-width:200px"><button class="btn" type="submit">保存新密码</button></form></div>
+  </section>
+
+  <!-- ============ 专家复评 ============ -->
+  <section class="view" data-view="review" hidden>
+    <div class="vhead"><div><h1>专家复评</h1><p id="reviewSub">每个复评日北京时间 07:00 从前一天及之前的常规打分中自动抽课；专家对同一 Class ID 打分后自动完成，用于一致性对比。</p></div>
+      <button class="btn" type="button" id="btnReviewRefresh">刷新</button></div>
+    <div id="reviewBody"></div>
   </section>
 
   <!-- ============ 看板 ============ -->
