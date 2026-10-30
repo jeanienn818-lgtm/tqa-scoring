@@ -13,7 +13,7 @@ alter table public.scores add constraint scores_s_check check (s is null or arra
 drop policy if exists s_update on public.scores;
 create policy s_update on public.scores for update to authenticated
   using (user_id = (select auth.uid()) and public.is_member())
-  with check (user_id = (select auth.uid()) and import_role is null and source in ('web','历史导入'));
+  with check (user_id = (select auth.uid()) and import_role is null and source in ('web','历史导入','首批导入'));
 
 -- ============ 表 ============
 create table if not exists public.review_tasks (

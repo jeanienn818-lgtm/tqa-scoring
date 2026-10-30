@@ -61,6 +61,11 @@ declare e text := lower(coalesce(auth.jwt() ->> 'email', ''));
 begin
   if auth.uid() is null then return; end if;
   update members set user_id = auth.uid() where email = e and user_id is null;
+  -- 首批导入的"专家"记录：归属邮箱（app_config.data.import_owner.expert）的专家第一次登录时转到他名下
+  if e <> '' and e = lower(coalesce((select data->'import_owner'->>'expert' from app_config where id = 1), ''))
+     and exists(select 1 from members where user_id = auth.uid() and active and compare_role = 'expert') then
+    update scores set user_id = auth.uid(), import_role = null where import_role = 'expert' and user_id is null;
+  end if;
   return query select * from members where user_id = auth.uid() and active;
 end $$;
 
@@ -120,7 +125,7 @@ create policy s_insert on public.scores for insert to authenticated
   with check (user_id = (select auth.uid()) and public.is_member() and import_role is null and source = 'web');
 create policy s_update on public.scores for update to authenticated
   using (user_id = (select auth.uid()) and public.is_member())
-  with check (user_id = (select auth.uid()) and import_role is null and source = 'web');
+  with check (user_id = (select auth.uid()) and import_role is null and source in ('web','历史导入','首批导入'));
 create policy s_delete on public.scores for delete to authenticated using (user_id = (select auth.uid()) or public.is_admin());
 
 drop policy if exists c_select on public.app_config;

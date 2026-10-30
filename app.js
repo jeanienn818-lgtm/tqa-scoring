@@ -213,7 +213,8 @@ function memberById(uid){ return S.members.find(m=>m.user_id===uid)||(S.member&&
 function allRecords(){
   return S.all.map(r=>{ const rev=r.user_id||('import:'+(r.import_role||'regular')); return Object.assign({},r,{rev,role:roleOf(rev)}); });
 }
-function revName(id){ if(id==='import:regular') return '首批 · 打分者'; if(id==='import:expert') return '首批 · 专家';
+function revName(id){ if(id==='import:regular') return '首批 · 打分者';
+  if(id==='import:expert'){ const em=(S.cfg.import_owner||{}).expert, m=em&&S.members.find(x=>x.email===em); return m&&m.name?m.name:'首批 · 专家'; }
   const m=memberById(id); if(m&&m.name) return m.name; if(m&&m.is_owner) return '管理员'; if(m) return m.email.split('@')[0]; return '已移除的成员'; }
 function revKind(id){ if(id.indexOf('import:')===0) return '首批导入'; const m=memberById(id)||{}; return m.is_owner?'管理员（所有者）':m.is_admin?'管理员':'打分者'; }
 function roleOf(id){ if(id.indexOf('import:')===0) return id.slice(7); const m=memberById(id); return m?m.compare_role:'none'; }
