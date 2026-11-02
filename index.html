@@ -138,15 +138,29 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .cfgrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px}
 .days{display:flex;gap:4px;flex-wrap:wrap}.days label{display:flex;align-items:center;gap:3px;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.rules summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.rules ol{margin:10px 0 0;padding-left:20px;font-size:13.5px}.rules li{margin:5px 0}
+.dim .why{grid-column:1/-1;display:flex;gap:8px;align-items:center}.dim .why input{flex:1;min-width:0}.dim .why label{font-size:12px;color:var(--muted);white-space:nowrap}
+.linkbtn{border:0;background:none;color:var(--accent);cursor:pointer;font-size:12.5px;padding:0}
+.dim .why.req label{color:var(--bad);font-weight:600}.dim .why.miss input{border-color:var(--bad)}
+.issues{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.irow{display:grid;grid-template-columns:84px minmax(0,1fr) 92px 74px auto;gap:6px;align-items:center}
+.irow input,.irow select{min-height:34px}
+@media(max-width:700px){.irow{grid-template-columns:70px minmax(0,1fr) auto}.irow select{grid-column:span 1}}
+.sg{border-top:1px solid var(--line);padding:12px 0;display:flex;flex-direction:column;gap:6px}.sg:first-of-type{border-top:0}
+.sg .top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start}.sg .top input{width:100%}
+.sg .meta{display:flex;gap:4px 12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}.sg details{font-size:12.5px}.sg summary{cursor:pointer;color:var(--accent)}
+.sg.ign{opacity:.5}.sg .note{background:var(--sunk);border-radius:6px;padding:6px 10px;font-size:13px}
+.why2{display:grid;grid-template-columns:110px 1fr 1fr;gap:6px 10px;font-size:12.5px}.why2 b{font-weight:600}
 .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--sunk);color:var(--muted);margin-left:4px}
 </style>
 </head><body>
 <header class="top"><div class="in">
-  <div class="brand">TQA 看课打分台<small>V1.8</small></div>
+  <div class="brand">TQA 看课打分台<small>V1.9</small></div>
   <nav class="tabs" aria-label="页面" id="tabs" hidden>
     <a href="#score" data-v="score">打分</a>
     <a href="#mine" data-v="mine">我的记录</a>
     <a href="#review" data-v="review" hidden>复评</a>
+    <a href="#sync" data-v="sync" hidden>同步问题</a>
     <a href="#board" data-v="board" hidden>看板</a>
     <a href="#setup" data-v="setup" hidden>设置</a>
   </nav>
@@ -194,10 +208,19 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
   <!-- ============ 打分 ============ -->
   <section class="view" data-view="score">
     <div class="vhead">
-      <div><h1 id="formTitle">新建打分</h1><p>按 V1.8 评分标准，每节课一条记录；8 个维度都填完才能保存。</p></div>
+      <div><h1 id="formTitle">新建打分</h1><p>按 V1.9 评分标准，每节课一条记录；8 个维度都填完才能保存。</p></div>
       <div class="row"><button class="btn" id="btnReset" type="button">清空表单</button></div>
     </div>
     <form id="form" class="view" novalidate>
+      <details class="card rules" id="rules">
+        <summary><b>打分说明</b><span class="hint">评的是老师 · 对照这个学生 · 什么时候写原因 · 问题记什么</span></summary>
+        <ol>
+          <li><b>评的是老师。</b>"老师"指整堂 AI 课的呈现，包括课件内容、语音、识别和产品交互。分数如实反映课堂表现，不因问题的根因调整打分；根因在问题记录里标注。</li>
+          <li><b>对照这个学生判断。</b>学生水平低本身不扣分；老师没有根据这个学生的情况调整、没有给机会和支架，才扣分。</li>
+          <li><b>打分原因。</b>打 ≤6 分或 ≥9 分时必须写原因（时间点 + 老师的具体行为），7–8 分可以不写。</li>
+          <li><b>问题只记需要有人去改的事。</b>解释分数的内容写在维度原因里；问题描述写"环节 + 现象 + 期望"。</li>
+        </ol>
+      </details>
       <div class="card">
         <h2>课程信息</h2>
         <div class="grid">
@@ -219,21 +242,12 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
       <div class="card" id="dims"><h2>8 维打分<small>点开"评分要点"可查看检查项和分档</small></h2></div>
 
       <div class="card">
-        <h2>亮点与问题</h2>
-        <div class="field"><label for="f-hl">亮点（标注回放时间点）</label><textarea id="f-hl" placeholder="02:10–02:40 孩子主动提问，老师自然接住"></textarea></div>
-        <div class="field">
-          <label for="f-issues">问题（一行一个：时间点｜现象｜根因）</label>
-          <div class="builder" aria-label="添加一条问题">
-            <input type="text" id="b-time" placeholder="07:40" aria-label="时间点">
-            <input type="text" id="b-text" class="ph" placeholder="现象，如：跟读语音只有问句，答案标准为问句加答句" aria-label="现象">
-            <select id="b-root" aria-label="根因"><option>课程</option><option>级别</option><option>识别</option><option>教学</option><option>产品</option><option>待查</option></select>
-            <label><input type="checkbox" id="b-sev"> 严重</label>
-            <button class="btn sm" type="button" id="b-add">添加一行</button>
-          </div>
-          <textarea id="f-issues" rows="4" placeholder="07:40｜跟读语音只有问句，答案标准为问句加答句｜课程"></textarea>
-          <p class="hint">根因：课程（课件内容 / 交互）· 级别（孩子与课程级别明显不符）· 识别（ASR / 评测）· 教学（AI 教学选择）· 产品（功能 / 播放 / 网络）· 待查。触及红线在行末加"｜严重"。</p>
-        </div>
-        <div class="field"><label for="f-sugg">优化建议</label><textarea id="f-sugg" rows="2"></textarea></div>
+        <h2>需要跟进的问题<small>只记需要有人去改的事，一条一行</small></h2>
+        <div id="issueRows" class="issues"></div>
+        <div class="row"><button class="btn sm" type="button" id="btnAddIssue">＋ 添加问题</button><span class="hint">问题描述写"环节 + 现象 + 期望"，如：跟读题：语音只读问句，答案标准却是问句加答句；期望答案与语音一致。</span></div>
+        <p class="hint">根因：课程（课件内容 / 交互）· 级别（学生与课程级别明显不符）· 识别（ASR / 评测）· 教学（AI 教学选择）· 产品（功能 / 播放 / 网络）· 待查。优先级由你判断，同步时还可以调整。</p>
+        <div class="field" id="legacyBox" hidden><label for="f-issues">原问题记录（旧格式，可修改）</label><textarea id="f-issues" rows="3"></textarea></div>
+        <div class="field"><label for="f-sugg">优化建议（选填）</label><textarea id="f-sugg" rows="2"></textarea></div>
       </div>
 
       <div class="totalbar">
@@ -261,6 +275,13 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
     <div id="reviewBody"></div>
   </section>
 
+  <!-- ============ 同步问题 ============ -->
+  <section class="view" data-view="sync" hidden>
+    <div class="vhead"><div><h1>同步问题</h1><p>把打分时记录的问题同步到问题反馈池：复制、粘贴、标记已同步。同一 Lesson、同一根因的问题已自动归成一组。</p></div>
+      <button class="btn" type="button" id="btnSyncRefresh">刷新</button></div>
+    <div id="syncBody"></div>
+  </section>
+
   <!-- ============ 看板 ============ -->
   <section class="view" data-view="board" hidden>
     <div class="vhead"><div><h1>看板</h1><p>打分进度、双人一致性、问题汇总和全部记录，按所选日期统计。</p></div><button class="btn" type="button" id="btnRefresh">刷新数据</button></div>
@@ -270,6 +291,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
         <div class="field"><label for="q-from">开始日期</label><input type="date" id="q-from"></div>
         <div class="field"><label for="q-to">结束日期</label><input type="date" id="q-to"></div>
         <div class="field"><label for="q-type">课程类型</label><select id="q-type"><option value="">全部</option><option>体验课</option><option>正式课</option></select></div>
+        <div class="field"><label for="q-level">级别</label><select id="q-level"><option value="">全部</option><option>Lv1</option><option>Lv2</option><option>Lv3</option><option>Lv4</option><option>Lv5</option><option>Lv6</option><option>Lv7</option><option>Lv8</option></select></div>
         <div class="field"><label for="q-rev">打分人（记录与问题）</label><select id="q-rev"><option value="">全部</option></select></div>
       </div>
     </div>

@@ -121,7 +121,7 @@ begin
   drop table if exists _cand; drop table if exists _need; drop table if exists _picked;
   create temp table _cand on commit drop as
     select distinct on (s.class_id) s.id, s.user_id, s.class_id, s.date, s.type, s.level, s.lesson, s.teacher, s.country, s.url,
-      (coalesce(s.issues,'') like '%严重%')::int as sev,
+      (coalesce(s.issues,'') like '%严重%' or exists(select 1 from issues ii where ii.score_id = s.id and ii.priority in ('P0','P1')))::int as sev,
       (s.total < 60 or exists(select 1 from unnest(s.s) v where v < 6))::int as low,
       (s.created_at at time zone 'Asia/Shanghai')::date as scored
     from scores s join members m on m.user_id = s.user_id and m.active and m.compare_role = 'regular'
@@ -234,7 +234,8 @@ begin
     raise exception '完成打分后才能查看对比';
   end if;
   select jsonb_agg(jsonb_build_object('who', coalesce(nullif(m.name,''), split_part(m.email,'@',1)), 's', s.s, 'total', s.total,
-           'hl', s.hl, 'issues', s.issues, 'sugg', s.sugg) order by s.created_at) into r
+           'hl', s.hl, 'issues', s.issues, 'sugg', s.sugg, 'reasons', s.reasons,
+           'issue_list', (select coalesce(jsonb_agg(jsonb_build_object('time', i.time, 'description', i.description, 'root', i.root, 'priority', i.priority) order by i.pos, i.created_at), '[]'::jsonb) from issues i where i.score_id = s.id)) order by s.created_at) into r
     from scores s join members m on m.user_id = s.user_id and m.compare_role = 'regular' where s.class_id = t.class_id;
   return coalesce(r, '[]'::jsonb);
 end $$;

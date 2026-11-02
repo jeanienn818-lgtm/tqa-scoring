@@ -1,8 +1,11 @@
 (function(){
 "use strict";
-const DIMS = [{"n": "热情与职业呈现", "w": 0.1, "q": "如果这是一位真人老师，这堂课会让家长觉得专业、可信吗？", "c": ["① 语气热情、有能量，语调有起伏，不平淡机械，也不过度夸张", "② 态度稳定，始终积极、亲切", "③ 内容和用语适合儿童", "④ 像老师而不是随意聊天的AI：不跑题、不闲扯"], "b": [["10分 卓越", "• 全程热情、有感染力，状态随活动自然变化\n• 专业亲切不夸张，没有突兀或无关表现"], ["9分 优秀", "• 全程热情、自然、专业，紧扣课堂\n• 个别时刻语气略平或略用力"], ["7–8分 良好", "• 整体热情专业，偶有语气平淡、略夸张或一两句无关的话"], ["5–6分 合格", "• 友好但能量一般，语气偏平或时有夸张\n• 偶尔跑题或情绪不稳\n• 像老师但缺少感染力"], ["3–4分 待改进", "• 语气机械或夸张做作\n• 多次跑题闲聊\n• 状态前后明显不一致"], ["1–2分 不合格", "• 出现不适合儿童的内容或情绪失当，基本不像在上课"]], "only": "老师整体的精神状态和职业感", "notin": "能否听懂 → 语速与语言；对孩子个人的关注 → 建立关系；教学步骤 → 教学策略与闭环"}, {"n": "语速与语言", "w": 0.15, "q": "孩子能听懂老师在说什么吗？老师说的英语准确吗？", "c": ["① 难度适配：语速适中，句子不过长，词汇和语法不超出该级别", "② 主动调整自己说的话：不等孩子说“慢一点”“听不懂”，就根据孩子的反应和回答质量（与目标答案的差距）调整语速、句长和用词：吃力时放慢、简化或换种说法，轻松时适当提高", "③ 指令简短明确，一次只说一件事", "④ 发音清楚，停顿和重音自然，关键词听得清", "⑤ 全英文，没有无意义的口头语和多余、重复的 Teacher Talk", "⑥ 老师的英语准确：讲解和示范没有用词、语法或发音错误"], "b": [["10分 卓越", "• 不等孩子提出，就能根据反应和回答质量及时、精准地调整语速、句长和用词，让孩子始终能听懂、又略有挑战\n• 全程清楚准确，几乎没有多余的 Teacher Talk"], ["9分 优秀", "• 语速、句长、用词与级别完全匹配，孩子吃力时通常能主动放慢或简化\n• 表达准确，发音清晰\n• 指令简短，一听就懂"], ["7–8分 良好", "• 基本匹配级别，偶有句子偏长、个别超纲词或多余重复\n• 偶尔主动调整，多数在孩子提出后才调整"], ["5–6分 合格", "• 多处偏快或偏慢、句子偏长或超纲，Teacher Talk 偏多，或偶有用词、语法不规范\n• 只在孩子提出“慢一点”“听不懂”后才调整，孩子常需老师重复"], ["3–4分 待改进", "• 语言明显高于或低于孩子水平，孩子提出“听不懂”后也不调整或调整无效\n• 指令混乱，口头语多\n• 或老师的英语有明显错误"], ["1–2分 不合格", "• 孩子大部分时间听不懂\n• 或多次讲错、示范错，误导孩子"]], "only": "老师说的话是否准确、易懂，语速和语言难度是否随孩子调整", "notin": "孩子是否回应 → 互动与参与；任务难度和提示的调整 → 教学策略与闭环"}, {"n": "互动与参与", "w": 0.15, "q": "孩子是在投入地参与课堂，还是只是在听AI说话？", "c": ["① 回应孩子真正说的内容，不是不管孩子说什么都照脚本往下走", "② 追问恰当，对话能自然延伸", "③ 从孩子的回应中识别犹豫、困惑或分心（如长时间沉默、答非所问），并把孩子拉回来", "④ 给孩子选择和主导的机会（选角色、选话题、向老师提问）", "⑤ 节奏合理：孩子说话时不抢话；老师回应及时，不冷场"], "b": [["10分 卓越", "• 全程有来有往\n• 各种回应（包括犹豫和沉默）都自然接住，孩子分心时迅速拉回、不打断学习\n• 孩子主动表达、主动提问"], ["9分 优秀", "• 每次都回应孩子真正说的内容，追问自然\n• 孩子犹豫、沉默或答非所问时及时拉回\n• 孩子全程积极回应"], ["7–8分 良好", "• 大多数时候回应到位，偶有一两次照脚本往下走或没接住孩子的话"], ["5–6分 合格", "• 回应模板化（如说完 Great 直接下一题），追问少\n• 孩子回应时有时无或答非所问时，老师常没接住"], ["3–4分 待改进", "• 经常忽略孩子的话自顾自讲，或频繁抢话\n• 孩子长时间沉默或敷衍时，老师不处理"], ["1–2分 不合格", "• 基本是单向灌输，孩子几乎不参与"]], "only": "有没有真实的双向互动，老师有没有注意到、接住孩子", "notin": "孩子说了多少、说得多好 → 学生输出；用什么方法等待和提示 → 教学策略与闭环；纠错时打断 → 纠错"}, {"n": "学生输出", "w": 0.1, "q": "这堂课让孩子产生了多少有意义的语言输出？", "c": ["① 生:师开口时长达到参考线（Lv1–2 3:7 · Lv3–4 4:6 · Lv5–6 5:5；孩子思考的停顿不算老师时长）", "② 输出达到级别期望：Lv1 准确模仿；Lv2 起能用完整句回答，不只是单词或 yes/no", "③ 有表达自己想法的个人化回答，不只是机械跟读", "④ 输出用到了本课目标语言"], "b": [["10分 卓越", "• 开口比例达到或超过参考线\n• 输出达到甚至高于级别期望，孩子从模仿走向相对独立、有意义的表达"], ["9分 优秀", "• 开口比例达到参考线\n• 输出达到级别期望，有个人化表达，用到本课目标语言"], ["7–8分 良好", "• 开口比例接近参考线\n• 输出基本达到级别期望，个人化表达或目标语言稍少"], ["5–6分 合格", "• 开口比例低于参考线\n• 输出低于级别期望（如 Lv2 以上仍多为单词或跟读），个人化表达少"], ["3–4分 待改进", "• 开口明显不足，以 yes/no 或简单跟读为主，几乎没有自己组织语言"], ["1–2分 不合格", "• 孩子几乎没开口，或开口内容与本课目标无关"]], "only": "孩子实际说出的语言（数量、完整度、独立性）", "notin": "老师如何引导、提示和检查 → 教学策略与闭环"}, {"n": "纠错", "w": 0.15, "q": "老师有没有抓住最值得教的错误，并用合适的方法帮孩子改正？", "c": ["① 发现发音、语法、词汇和理解错误", "② 不误纠：不把孩子说对的判成错", "③ 优先纠最值得教的错误（与本课目标相关、影响理解、反复出现），不过度打断", "④ 方式恰当：直接纠正、提示、重述、引导自我修正或澄清请求", "⑤ 让孩子再说一遍正确形式，确认改对了"], "b": [["10分 卓越", "• 准确把握纠什么、何时纠、怎么纠，无误纠、无多余打断\n• 孩子能自己说出正确形式"], ["9分 优秀", "• 准确发现关键错误，无误纠\n• 优先纠与目标相关的错误，方法得当\n• 通常让孩子再说一遍确认"], ["7–8分 良好", "• 抓住了主要错误，方法基本合适\n• 偶有漏纠、纠得过早，或没确认是否改对"], ["5–6分 合格", "• 纠错不均衡：漏掉重要错误或打断过多\n• 方法单一（只给正确答案），纠完不检查"], ["3–4分 待改进", "• 大量重要错误被忽略，或频繁打断让孩子不敢说\n• 出现误纠"], ["1–2分 不合格", "• 基本不纠错，或多次误纠，误导孩子"]], "only": "错误的识别、处理和修正效果", "notin": "纠错时孩子的情绪 → 建立关系；新内容的示范和练习 → 教学策略与闭环"}, {"n": "建立关系", "w": 0.1, "q": "孩子能否从老师的回应中感到被关注、被理解，并愿意继续尝试？", "c": ["① 亲切地叫名字打招呼，从容告别", "② 接住孩子本课分享的内容；有历史记录时，记得孩子之前说过的话", "③ 表扬具体、真诚，不反复机械地说 Good job", "④ 孩子犯错或迟疑时语气耐心、不责备，孩子仍愿意继续说", "⑤ 孩子沮丧时（如说 I can't、声音变小）先安慰再教"], "b": [["10分 卓越", "• 交流自然、个性化而不过度\n• 细致接住孩子话语中的分享、努力和情绪（如语气低落、说不会），孩子愿意持续尝试"], ["9分 优秀", "• 叫名字、从容开场与告别\n• 接住孩子的分享，兴趣真诚\n• 表扬具体\n• 孩子犯错或沮丧时被妥善安抚"], ["7–8分 良好", "• 关系温暖自然\n• 个性化回应稍少，或表扬偶尔笼统"], ["5–6分 合格", "• 礼貌但模板化：表扬多为 Good job，很少回应孩子的个人分享，部分情绪信号没接住"], ["3–4分 待改进", "• 冷淡敷衍，忽略孩子的分享\n• 孩子犯错或沮丧时不安抚，甚至语气不耐烦"], ["1–2分 不合格", "• 冷漠、不尊重，或语气严厉、责备，让孩子不敢再说"]], "only": "老师对这个孩子的关注、回应和情绪支持", "notin": "整体热情 → 热情与职业呈现；催促、不留思考时间 → 教学策略与闭环"}, {"n": "TPR与教具", "w": 0.1, "q": "老师有没有用动作、图片、教具等直观手段，帮孩子理解和记住语言？", "c": ["① Lv1–3 使用多样、恰当的 TPR、教具和课件（图片、实物、动画）", "② 辅助手段与语言内容对应、指向清楚，真正帮助理解，不是装饰或干扰", "③ 引导孩子跟着做动作（如 Clap your hands!），不只是老师自己演示", "④ Lv4–6 按需使用（如抽象词、易混点），不为用而用"], "b": [["10分 卓越", "• 动作、图片、教具选得准、配合好，抽象词和易混点一看就懂\n• 经常引导孩子跟做\n• 不冗余"], ["9分 优秀", "• Lv1–3：辅助手段与语言精准对应，明显帮助理解，多次引导孩子跟做\n• Lv4–6：使用适度"], ["7–8分 良好", "• 使用恰当、有帮助\n• 种类稍少，或很少引导孩子跟做"], ["5–6分 合格", "• 有使用但单一或时机不佳，与内容对应不紧\n• 多是老师自己演示，很少引导孩子跟做"], ["3–4分 待改进", "• Lv1–3 很少用直观手段，孩子难以理解\n• 或手段与内容不符、动作含糊"], ["1–2分 不合格", "• Lv1–3 完全靠口头讲解\n• 或辅助内容错误、误导孩子\n• 或 Lv4–6 过度依赖教具，挤占语言练习"]], "only": "动作、图片、教具等非语言辅助是否选得对、用得好", "notin": "检查理解、提示、难度调整 → 教学策略与闭环"}, {"n": "教学策略与闭环", "w": 0.15, "q": "老师是围绕教学目标一步步把孩子教会，还是只在陪聊或直接给答案？", "c": ["① 目标与复现：能看出清晰的教学目标（如目标词汇、句型）；核心内容在各环节反复出现，换形式练习和检验，并有控制地拓展，不是讲一次就结束", "② 示范与梯度：先给清楚的语言示范（动作示范和跟做归 TPR 与教具），再从跟说、替换练习到独立表达逐步放手；过渡自然、节奏合适，不跳步、不无效重复、不仓促", "③ 提问与等待：问题清楚，孩子开口前留足思考时间，不催促、不替孩子回答", "④ 分步支持：孩子卡住时逐步给提示（首字母、选项、句型），最后才给答案", "⑤ 检查理解：按级别确认孩子真懂，不只问“Do you understand?”（Lv1–2 用看图问答、二选一、Yes/No 等一个词能答的方式；Lv3 起用概念检查问题或小任务）", "⑥ 主动调整难度：根据孩子表现，会了就减少提示、加大难度，吃力就把任务拆成小步", "⑦ 收尾回顾：带孩子回顾本课重点并自己说出来，确认目标达成"], "b": [["10分 卓越", "• 目标与复现：目标清晰，核心内容反复出现，换形式练习、检验并有控制地拓展\n• 策略：示范、等待、提示、检查都恰到好处，并主动调整难度\n• 达成：每个目标点都走完“示范→练习→检查→确认学会”，课末带孩子回顾并自己说出本课重点，闭环完整"], ["9分 优秀", "• 目标与复现：目标清楚，核心内容多次复现，换形式练习和检验\n• 策略：先示范再要求，留足时间，分层提示，有效检查，按掌握情况调整难度，结尾让孩子回顾\n• 达成：主要目标点都做了检查和确认，结尾带孩子回顾"], ["7–8分 良好", "• 目标与复现：目标清楚，有复现但形式单一，或检验、拓展不够\n• 策略：基本有效，个别环节仓促、提示偏多，或检查、回顾不足\n• 达成：多数目标点做了检查和确认，个别目标点未确认或回顾不足"], ["5–6分 合格", "• 目标与复现：能看出目标，但复现少，多是同一形式重复\n• 策略：常跳步（没示范就让孩子说）、不留思考时间、只问 Do you understand?，难度不随孩子调整\n• 达成：只对部分内容做了检查，确认和回顾较少"], ["3–4分 待改进", "• 目标与复现：目标模糊，核心内容讲一次就过去\n• 策略：环节混乱或长时间卡住，孩子卡住时只重复原话或直接给答案，练习没有梯度\n• 达成：基本没有检查和确认，没有回顾"], ["1–2分 不合格", "• 目标与复现：看不出教学目标\n• 策略：基本没有教学设计，像聊天或单纯讲解\n• 达成：没有检查、确认或回顾"]], "only": "老师的教学动作：教学步骤、方法和任务难度的主动调整；“闭环”指围绕教学目标，核心内容反复出现，每个目标点都走完“示范→练习→检查→确认学会”，结尾回到目标回顾", "notin": "非语言辅助 → TPR与教具；错误处理 → 纠错；孩子实际说出的语言，包括课末能否独立说出目标语言 → 学生输出；抢话打断 → 互动与参与；开场和告别 → 建立关系；说话的语速和用词调整 → 语速与语言"}];
+const DIMS = [{"n": "热情与职业呈现", "w": 0.1, "q": "如果这是一位真人老师，这堂课会让家长觉得专业、可信吗？", "c": ["① 语气热情、有能量，语调有起伏，不平淡机械，也不过度夸张", "② 态度稳定，始终积极、亲切", "③ 内容和用语适合学生的年龄", "④ 像老师而不是随意聊天的AI：不跑题、不闲扯"], "b": [["10分 卓越", "• 全程热情、有感染力，状态随活动自然变化\n• 专业亲切不夸张，没有突兀或无关表现"], ["9分 优秀", "• 全程热情、自然、专业，紧扣课堂\n• 个别时刻语气略平或略用力"], ["7–8分 良好", "• 整体热情专业，偶有语气平淡、略夸张或一两句无关的话"], ["5–6分 合格", "• 友好但能量一般，语气偏平或时有夸张\n• 偶尔跑题或情绪不稳\n• 像老师但缺少感染力"], ["3–4分 待改进", "• 语气机械或夸张做作\n• 多次跑题闲聊\n• 状态前后明显不一致"], ["1–2分 不合格", "• 出现不适合儿童的内容或情绪失当，基本不像在上课"]], "only": "老师整体的精神状态和职业感", "notin": "能否听懂 → 语速与语言；对学生本人的关注 → 建立关系；教学步骤 → 教学策略与闭环"}, {"n": "语速与语言", "w": 0.15, "q": "老师的语速和用词是否适配课中这个学生的水平？说的英语是否准确、清楚？", "c": ["① 难度适配：语速适中，句子不过长，词汇和语法不超出这个学生的水平和课程级别", "② 主动调整自己说的话：不等学生说“慢一点”“听不懂”，就根据学生的反应和回答质量（与目标答案的差距）调整语速、句长和用词：吃力时放慢、简化或换种说法，轻松时适当提高", "③ 指令简短明确，一次只说一件事", "④ 发音清楚，停顿和重音自然，关键词听得清", "⑤ 全英文，没有无意义的口头语和多余、重复的 Teacher Talk", "⑥ 老师的英语准确：讲解和示范没有用词、语法或发音错误"], "b": [["10分 卓越", "• 不等学生提出，就能根据反应和回答质量及时、精准地调整语速、句长和用词，让学生始终能听懂、又略有挑战\n• 全程清楚准确，几乎没有多余的 Teacher Talk"], ["9分 优秀", "• 语速、句长、用词与级别完全匹配，学生吃力时通常能主动放慢或简化\n• 表达准确，发音清晰\n• 指令简短，一听就懂"], ["7–8分 良好", "• 基本匹配级别，偶有句子偏长、个别超纲词或多余重复\n• 偶尔主动调整，多数在学生提出后才调整"], ["5–6分 合格", "• 多处偏快或偏慢、句子偏长或超纲，Teacher Talk 偏多，或偶有用词、语法不规范\n• 只在学生提出“慢一点”“听不懂”后才调整，学生常需老师重复"], ["3–4分 待改进", "• 语言明显高于或低于学生水平，学生提出“听不懂”后也不调整或调整无效\n• 指令混乱，口头语多\n• 或老师的英语有明显错误"], ["1–2分 不合格", "• 老师的语言与学生水平严重不匹配，学生大部分时间听不懂\n• 或多次讲错、示范错，误导学生"]], "only": "老师说的话是否适配这个学生的水平、是否准确清楚，包括随学生的反应调整语速、句长和用词", "notin": "学生是否回应、互动是否有针对性 → 互动与参与；任务难度和提示的调整 → 教学策略与闭环"}, {"n": "互动与参与", "w": 0.15, "q": "老师有没有根据学生的实际情况发起有针对性的互动，并接住学生的反应，让学生投入进来？", "c": ["① 根据这个学生的实际情况（水平、兴趣、当下状态）发起互动，不是对所有学生同一套问话", "② 回应学生真正说的内容，不是不管学生说什么都照脚本往下走", "③ 追问恰当，对话能自然延伸", "④ 从学生的回应中识别犹豫、困惑或分心（如长时间沉默、答非所问），并把学生拉回来", "⑤ 给学生选择和主导的机会（选角色、选话题、向老师提问）", "⑥ 节奏合理：学生说话时不抢话；老师回应及时，不冷场"], "b": [["10分 卓越", "• 互动始终贴合这个学生的情况发起，全程有来有往\n• 各种回应（包括犹豫和沉默）都自然接住，学生分心时迅速拉回、不打断学习\n• 学生主动表达、主动提问"], ["9分 优秀", "• 互动有针对性，每次都回应学生真正说的内容，追问自然\n• 学生犹豫、沉默或答非所问时及时拉回\n• 学生全程积极回应"], ["7–8分 良好", "• 大多数时候互动到位，偶有一两次照脚本往下走、互动与学生情况不太贴合，或没接住学生的话"], ["5–6分 合格", "• 互动模板化（如说完 Great 直接下一题），较少针对学生的情况，追问少\n• 学生回应时有时无或答非所问时，老师常没接住"], ["3–4分 待改进", "• 经常忽略学生的话自顾自讲，或频繁抢话\n• 学生长时间沉默或敷衍时，老师不处理"], ["1–2分 不合格", "• 基本是单向灌输，没有给学生参与的机会"]], "only": "老师是否针对学生的实际情况发起互动，并在内容上接住学生的反应、让学生投入", "notin": "学生说了多少、说得多完整，以及帮学生开口的支架 → 学生输出；对学生本人的情绪回应和个性化关注 → 建立关系；纠错时打断 → 纠错"}, {"n": "学生输出", "w": 0.1, "q": "老师有没有给够开口机会，并用提示、拆分、示范等支架推动学生开口、表达得更完整、更独立？", "c": ["① 开口机会：生:师开口时长达到参考线（Lv1–2 3:7 · Lv3–4 4:6 · Lv5–6 5:5；学生思考的停顿不算老师时长）", "② 输出要求与级别匹配：Lv1 引导准确模仿；Lv2 起引导用完整句回答，不满足于单词或 yes/no", "③ 支架：学生说不出或说不完整时，用提示（首字母、关键词、选项）、拆分、句型示范等帮学生说出来，而不是替学生说或直接跳过", "④ 推向独立：随学生表现逐步撤掉支架，引导学生用本课目标语言表达自己的想法，不停留在机械跟读", "※ 对照这个学生的水平判断：学生能力弱不扣分；老师没有给机会、没有用支架把学生的输出推到他能达到的程度，才扣分"], "b": [["10分 卓越", "• 开口机会达到或超过参考线\n• 支架精准并逐步撤除，学生从模仿走向相对独立、有意义的表达"], ["9分 优秀", "• 开口机会达到参考线\n• 学生卡住时总能用合适的支架帮他说出来，要求符合级别，引导出个人化表达和本课目标语言"], ["7–8分 良好", "• 开口机会接近参考线\n• 支架基本有效，偶尔直接给答案或满足于不完整的回答，个人化表达或目标语言引导稍少"], ["5–6分 合格", "• 开口机会低于参考线\n• 支架少或单一（多为让学生跟读），对 Lv2 以上的学生也满足于单词或 yes/no"], ["3–4分 待改进", "• 开口机会明显不足，老师说得多、学生说得少\n• 学生说不出时老师替他说或直接跳过"], ["1–2分 不合格", "• 几乎不给学生开口机会，或开口任务与本课目标无关"]], "only": "老师为学生创造的开口机会和输出支架，以及学生在支架下说出的语言（数量、完整度、独立性，对照这个学生的水平）", "notin": "互动是否有针对性、是否接住学生的反应 → 互动与参与；整堂课的环节设计、示范→练习→检查和难度调整 → 教学策略与闭环；错误的纠正 → 纠错"}, {"n": "纠错", "w": 0.15, "q": "老师有没有抓住最值得教的错误，并用合适的方法帮学生改正？", "c": ["① 发现发音、语法、词汇和理解错误", "② 不误纠：不把学生说对的判成错", "③ 优先纠最值得教的错误（与本课目标相关、影响理解、反复出现），不过度打断", "④ 方式恰当：直接纠正、提示、重述、引导自我修正或澄清请求", "⑤ 让学生再说一遍正确形式，确认改对了"], "b": [["10分 卓越", "• 准确把握纠什么、何时纠、怎么纠，无误纠、无多余打断\n• 学生能自己说出正确形式"], ["9分 优秀", "• 准确发现关键错误，无误纠\n• 优先纠与目标相关的错误，方法得当\n• 通常让学生再说一遍确认"], ["7–8分 良好", "• 抓住了主要错误，方法基本合适\n• 偶有漏纠、纠得过早，或没确认是否改对"], ["5–6分 合格", "• 纠错不均衡：漏掉重要错误或打断过多\n• 方法单一（只给正确答案），纠完不检查"], ["3–4分 待改进", "• 大量重要错误被忽略，或频繁打断让学生不敢说\n• 出现误纠"], ["1–2分 不合格", "• 基本不纠错，或多次误纠，误导学生"]], "only": "错误的识别、处理和修正效果", "notin": "纠错时学生的情绪 → 建立关系；新内容的示范和练习 → 教学策略与闭环"}, {"n": "建立关系", "w": 0.1, "q": "老师有没有关注到这个学生，回应他的尝试和情绪（如叫对名字、记住他说过的话、具体的鼓励），让他感到老师关注的是他本人？", "c": ["① 叫对学生的名字，亲切打招呼，从容告别", "② 接住学生本课分享的内容；有历史记录时，记得学生之前说过的话", "③ 表扬具体、真诚，不反复机械地说 Good job", "④ 学生犯错或迟疑时语气耐心、不责备，学生仍愿意继续说", "⑤ 学生沮丧时（如说 I can't、声音变小）先安慰再教"], "b": [["10分 卓越", "• 交流自然、个性化而不过度\n• 细致接住学生话语中的分享、努力和情绪（如语气低落、说不会），学生愿意持续尝试"], ["9分 优秀", "• 叫名字、从容开场与告别\n• 接住学生的分享，兴趣真诚\n• 表扬具体\n• 学生犯错或沮丧时被妥善安抚"], ["7–8分 良好", "• 关系温暖自然\n• 个性化回应稍少，或表扬偶尔笼统"], ["5–6分 合格", "• 礼貌但模板化：表扬多为 Good job，很少回应学生的个人分享，部分情绪信号没接住"], ["3–4分 待改进", "• 冷淡敷衍，忽略学生的分享\n• 学生犯错或沮丧时不安抚，甚至语气不耐烦"], ["1–2分 不合格", "• 冷漠、不尊重，或语气严厉、责备，让学生不敢再说"]], "only": "老师对这个学生本人的关注：叫对名字、记住他说过的话、具体的鼓励和情绪支持", "notin": "整体热情 → 热情与职业呈现；对学生话语内容的接话和追问 → 互动与参与；催促、不留思考时间 → 教学策略与闭环"}, {"n": "TPR与教具", "w": 0.1, "q": "老师有没有用动作、图片、教具等直观手段，帮学生理解和记住语言？", "c": ["① Lv1–3 使用多样、恰当的 TPR、教具和课件（图片、实物、动画）", "② 辅助手段与语言内容对应、指向清楚，真正帮助理解，不是装饰或干扰", "③ 引导学生跟着做动作（如 Clap your hands!），不只是老师自己演示", "④ Lv4–6 按需使用（如抽象词、易混点），不为用而用"], "b": [["10分 卓越", "• 动作、图片、教具选得准、配合好，抽象词和易混点一看就懂\n• 经常引导学生跟做\n• 不冗余"], ["9分 优秀", "• Lv1–3：辅助手段与语言精准对应，明显帮助理解，多次引导学生跟做\n• Lv4–6：使用适度"], ["7–8分 良好", "• 使用恰当、有帮助\n• 种类稍少，或很少引导学生跟做"], ["5–6分 合格", "• 有使用但单一或时机不佳，与内容对应不紧\n• 多是老师自己演示，很少引导学生跟做"], ["3–4分 待改进", "• Lv1–3 很少用直观手段，学生难以理解\n• 或手段与内容不符、动作含糊"], ["1–2分 不合格", "• Lv1–3 完全靠口头讲解\n• 或辅助内容错误、误导学生\n• 或 Lv4–6 过度依赖教具，挤占语言练习"]], "only": "动作、图片、教具等非语言辅助是否选得对、用得好", "notin": "检查理解、提示、难度调整 → 教学策略与闭环"}, {"n": "教学策略与闭环", "w": 0.15, "q": "老师是围绕教学目标一步步把学生教会，还是只在陪聊或直接给答案？", "c": ["① 目标与复现：能看出清晰的教学目标（如目标词汇、句型）；核心内容在各环节反复出现，换形式练习和检验，并有控制地拓展，不是讲一次就结束", "② 示范与梯度：先给清楚的语言示范（动作示范和跟做归 TPR 与教具），再从跟说、替换练习到独立表达逐步放手；过渡自然、节奏合适，不跳步、不无效重复、不仓促", "③ 提问与等待：问题清楚，学生开口前留足思考时间，不催促、不替学生回答", "④ 分步支持：学生在理解或完成任务上卡住时逐步给提示（选项、示例、拆成小步），最后才给答案（帮学生开口说出来的提示和支架看学生输出）", "⑤ 检查理解：按级别确认学生真懂，不只问“Do you understand?”（Lv1–2 用看图问答、二选一、Yes/No 等一个词能答的方式；Lv3 起用概念检查问题或小任务）", "⑥ 主动调整难度：根据学生表现，会了就减少提示、加大难度，吃力就把任务拆成小步", "⑦ 收尾回顾：带学生回顾本课重点并自己说出来，确认目标达成"], "b": [["10分 卓越", "• 目标与复现：目标清晰，核心内容反复出现，换形式练习、检验并有控制地拓展\n• 策略：示范、等待、提示、检查都恰到好处，并主动调整难度\n• 达成：每个目标点都走完“示范→练习→检查→确认学会”，课末带学生回顾并自己说出本课重点，闭环完整"], ["9分 优秀", "• 目标与复现：目标清楚，核心内容多次复现，换形式练习和检验\n• 策略：先示范再要求，留足时间，分层提示，有效检查，按掌握情况调整难度，结尾让学生回顾\n• 达成：主要目标点都做了检查和确认，结尾带学生回顾"], ["7–8分 良好", "• 目标与复现：目标清楚，有复现但形式单一，或检验、拓展不够\n• 策略：基本有效，个别环节仓促、提示偏多，或检查、回顾不足\n• 达成：多数目标点做了检查和确认，个别目标点未确认或回顾不足"], ["5–6分 合格", "• 目标与复现：能看出目标，但复现少，多是同一形式重复\n• 策略：常跳步（没示范就让学生说）、不留思考时间、只问 Do you understand?，难度不随学生调整\n• 达成：只对部分内容做了检查，确认和回顾较少"], ["3–4分 待改进", "• 目标与复现：目标模糊，核心内容讲一次就过去\n• 策略：环节混乱或长时间卡住，学生卡住时只重复原话或直接给答案，练习没有梯度\n• 达成：基本没有检查和确认，没有回顾"], ["1–2分 不合格", "• 目标与复现：看不出教学目标\n• 策略：基本没有教学设计，像聊天或单纯讲解\n• 达成：没有检查、确认或回顾"]], "only": "老师的教学动作：教学步骤、方法和任务难度的主动调整；“闭环”指围绕教学目标，核心内容反复出现，每个目标点都走完“示范→练习→检查→确认学会”，结尾回到目标回顾", "notin": "非语言辅助 → TPR与教具；错误处理 → 纠错；单个回合里帮学生开口的支架，以及学生实际说出的语言 → 学生输出；抢话打断 → 互动与参与；开场和告别 → 建立关系；说话的语速和用词调整 → 语速与语言"}];
+const RUBRIC = 'V1.9';
 const SHORT = ['热情','语速','互动','输出','纠错','关系','TPR','策略'];
 const ROOTS = ['课程','级别','识别','教学','产品','待查'];
+const PRIS = ['P0','P1','P2','P3'];
+const LEVELS = ['Lv1','Lv2','Lv3','Lv4','Lv5','Lv6','Lv7','Lv8'];
 const ROOT_TO = {'课程':'课程产品 / 教研','级别':'定级 / 排课','识别':'模型 / 工程','教学':'Prompt / 教学策略','产品':'产品 / 工程','待查':'专家复核'};
 const DEFAULT_CFG = {roles:{}, teachers:['Kim','Leo','Max'],
   targets:{diff:[2,1], pass:[0.85,0.90], icc:[0.75,0.80], dim:[0.95,0.95]},
@@ -23,8 +26,9 @@ let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList
 
 const S = { uid:null, email:'', member:null, isAdmin:false, isOwner:false, myName:'',
   cfg:JSON.parse(JSON.stringify(DEFAULT_CFG)), mine:[], all:[], members:[], loaded:false,
-  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:''}, openRow:null, includeUnfmt:false, authMode:'login',
-  isExpert:false, tasks:[], myTasks:[], fromTask:null, cmpOpen:null, cmpData:{}, rvWeek:null };
+  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:'',level:''}, openRow:null, includeUnfmt:false, authMode:'login',
+  isExpert:false, tasks:[], myTasks:[], fromTask:null, cmpOpen:null, cmpData:{}, rvWeek:null,
+  canSync:false, reasons:Array(8).fill(''), issueRows:[], issuesBy:{}, syncItems:null, syncState:{}, syncCopied:false, openPair:null };
 
 /* ---------------- data layer (Supabase) ---------------- */
 const CONF = window.TQA_CONFIG || {};
@@ -59,12 +63,19 @@ function makeApi(){
     genReview: () => un(sb.rpc('generate_review_tasks',{p_manual:true})),
     cancelReview: id => un(sb.rpc('cancel_review_task',{p_id:id})),
     addReview: cls => un(sb.rpc('add_review_task',{p_class:cls})),
-    reviewCompare: id => un(sb.rpc('review_compare',{p_id:id}))
+    reviewCompare: id => un(sb.rpc('review_compare',{p_id:id})),
+    issues: uid => pageAll(()=>{ let q=sb.from('issues').select('*').order('created_at'); if(uid) q=q.eq('user_id',uid); return q; }),
+    insertIssues: rows => un(sb.from('issues').insert(rows).select()),
+    updateIssue: (id,row) => un(sb.from('issues').update(row).eq('id',id).select().single()),
+    deleteIssues: ids => un(sb.from('issues').delete().in('id',ids)),
+    syncPending: () => un(sb.rpc('sync_pending')),
+    syncApply: (groups,ignore) => un(sb.rpc('sync_apply',{p_groups:groups,p_ignore:ignore}))
   };
 }
 function fromDb(r){ return { id:r.id, user_id:r.user_id, import_role:r.import_role, source:r.source, date:r.date, type:r.type, level:r.level, lesson:r.lesson,
   classId:r.class_id, teacher:r.teacher, country:r.country, done:r.done, camera:r.camera, url:r.url, s:r.s?r.s.map(Number):Array(8).fill(null), archived:!r.s,
-  total:r.total==null?null:Number(r.total), hl:r.hl, issues:r.issues, sugg:r.sugg,
+  total:r.total==null?null:Number(r.total), hl:r.hl, issues:r.issues, sugg:r.sugg, rubric:r.rubric||null,
+  reasons:Array.isArray(r.reasons)?r.reasons.slice(0,8).concat(Array(8).fill(null)).slice(0,8):Array(8).fill(null),
   createdAt:r.source==='首批导入'?null:r.created_at, updatedAt:r.updated_at }; }
 function errMsg(e){ if(e&&e.friendly) return e.message; const m=(e&&(e.message||e.error_description))||''; 
   if(/Invalid login/i.test(m)) return '邮箱或密码不对';
@@ -77,11 +88,12 @@ function errMsg(e){ if(e&&e.friendly) return e.message; const m=(e&&(e.message||
   return m||'操作失败，请稍后再试'; }
 
 /* ---------------- routing ---------------- */
-const VIEWS=['score','mine','review','board','setup'];
+const VIEWS=['score','mine','review','sync','board','setup'];
 function route(){
   let v=location.hash.slice(1); if(VIEWS.indexOf(v)<0) v='score';
   if((v==='board'||v==='setup') && !S.isAdmin) v='score';
   if(v==='review' && !S.isAdmin && !S.isExpert) v='score';
+  if(v==='sync' && !S.isAdmin && !S.canSync) v='score';
   const signedOut=!S.uid, denied=!!S.uid&&!S.member;
   const gate=!signedOut&&!denied&&(S.needName||S.renaming);
   $('#auth').hidden=!signedOut; $('#denied').hidden=!denied; $('#gate').hidden=!gate;
@@ -90,7 +102,7 @@ function route(){
   document.querySelectorAll('[data-view]').forEach(el=>el.hidden=!show||el.dataset.view!==v);
   document.querySelectorAll('.tabs a').forEach(a=>{ if(a.dataset.v===v) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
   if(!show) return;
-  if(v==='mine') renderMine(); if(v==='review') renderReview(); if(v==='board') renderBoard(); if(v==='setup') renderSetup();
+  if(v==='mine') renderMine(); if(v==='review') renderReview(); if(v==='sync') loadSync(); if(v==='board') renderBoard(); if(v==='setup') renderSetup();
 }
 window.addEventListener('hashchange',route);
 
@@ -104,11 +116,14 @@ function buildDims(){
       <details><summary>评分要点</summary><div class="guide">
         <div><h4>检查项</h4><ul>${d.c.map(c=>`<li>${esc(c)}</li>`).join('')}</ul><h4 style="margin-top:8px">只看</h4><p>${esc(d.only)}</p><h4 style="margin-top:8px">不在此扣分</h4><p>${esc(d.notin)}</p></div>
         <div><h4>分档</h4>${d.b.map(([k,t])=>`<div class="band"><b>${esc(k)}</b><span>${esc(t).replace(/\n/g,'<br>')}</span></div>`).join('')}</div>
-      </div></details>`;
+      </div></details>
+      <div class="why" data-why="${i}" hidden><button type="button" class="linkbtn" data-open="${i}">＋ 写打分原因（选填）</button><label for="why-${i}">打分原因</label><input type="text" id="why-${i}" data-wi="${i}" maxlength="300" placeholder="时间点 + 老师的具体行为，如：03:10 学生读错 bread，老师只说 good try 没有示范"></div>`;
     box.appendChild(el);
   });
   box.addEventListener('click',e=>{ const b=e.target.closest('.scale button'); if(!b) return;
     const i=+b.dataset.d, v=+b.dataset.v; S.scores[i]=(S.scores[i]===v)?null:v; paintScores(); });
+  box.addEventListener('click',e=>{ const o=e.target.closest('[data-open]'); if(!o) return; const w=o.closest('.why'); w.dataset.open='1'; paintScores(); w.querySelector('input').focus(); });
+  box.addEventListener('input',e=>{ const x=e.target.closest('[data-wi]'); if(!x) return; S.reasons[+x.dataset.wi]=x.value; x.closest('.why').classList.remove('miss'); });
 }
 function paintScores(){
   document.querySelectorAll('.scale button').forEach(b=>b.setAttribute('aria-pressed',String(S.scores[+b.dataset.d]===+b.dataset.v)));
@@ -119,7 +134,14 @@ function paintScores(){
   if(low.length) f+=` · <span class="pill bad">低于 6 分：${esc(low.join('、'))}</span>`;
   if(t!=null&&t<60) f+=` · <span class="pill bad">总分低于 60</span>`;
   $('#flags').innerHTML=f;
+  document.querySelectorAll('[data-why]').forEach(w=>{ const i=+w.dataset.why, v=S.scores[i];
+    w.hidden=v==null; const req=v!=null&&(v<=6||v>=9); w.classList.toggle('req',req);
+    w.querySelector('label').textContent=req?'打分原因（必填）':'打分原因（选填）';
+    const showInp=req||!!(S.reasons[i]||'').trim()||w.dataset.open==='1';
+    w.querySelector('label').hidden=!showInp; w.querySelector('input').hidden=!showInp; w.querySelector('[data-open]').hidden=showInp;
+    const inp=w.querySelector('input'); if(inp.value!==(S.reasons[i]||'')) inp.value=S.reasons[i]||''; });
 }
+const needReason = v => v!=null && (v<=6 || v>=9);
 function fillTeachers(sel, cur){
   const list=(S.cfg.teachers||[]).slice(); if(cur&&list.indexOf(cur)<0) list.push(cur);
   sel.innerHTML=list.map(t=>`<option>${esc(t)}</option>`).join('')+'<option value="">其他 / 未知</option>';
@@ -128,7 +150,9 @@ function fillTeachers(sel, cur){
 function resetForm(keepCourse){
   S.editing=null; S.scores=Array(8).fill(null); if(!keepCourse){ S.fromTask=null; $('#taskHint').hidden=true; }
   if(!keepCourse){ ['f-lesson','f-class','f-country','f-url'].forEach(id=>$('#'+id).value=''); $('#f-date').value=today(); }
-  ['f-hl','f-issues','f-sugg','b-time','b-text'].forEach(id=>$('#'+id).value=''); $('#b-sev').checked=false;
+  ['f-issues','f-sugg'].forEach(id=>$('#'+id).value=''); $('#legacyBox').hidden=true;
+  S.reasons=Array(8).fill(''); S.issueRows=[]; renderIssueRows();
+  document.querySelectorAll('.why').forEach(w=>{ w.classList.remove('miss'); delete w.dataset.open; });
   $('#formTitle').textContent='新建打分'; $('#btnCancelEdit').hidden=true; $('#btnSave').textContent='保存记录'; $('#dupHint').hidden=true;
   paintScores();
 }
@@ -136,7 +160,10 @@ function loadIntoForm(r){
   S.editing=r.id; $('#f-date').value=r.date||''; $('#f-type').value=r.type||'体验课'; $('#f-level').value=r.level||'Lv1';
   $('#f-lesson').value=r.lesson||''; $('#f-class').value=r.classId||''; fillTeachers($('#f-teacher'),r.teacher||'');
   $('#f-country').value=r.country||''; $('#f-done').value=r.done||'完课'; $('#f-cam').value=r.camera||'开'; $('#f-url').value=r.url||'';
-  $('#f-hl').value=r.hl||''; $('#f-issues').value=r.issues||''; $('#f-sugg').value=r.sugg||'';
+  $('#f-issues').value=r.issues||''; $('#legacyBox').hidden=!r.issues; $('#f-sugg').value=r.sugg||'';
+  S.reasons=(r.reasons||[]).map(x=>x||''); while(S.reasons.length<8) S.reasons.push('');
+  S.issueRows=(S.issuesBy[r.id]||[]).map(x=>({id:x.id,time:x.time||'',description:x.description||'',root:x.root,priority:x.priority,status:x.status}));
+  renderIssueRows();
   S.scores=(r.s||[]).slice(0,8).map(v=>typeof v==='number'?v:null); while(S.scores.length<8) S.scores.push(null);
   $('#formTitle').textContent='编辑记录 · Class '+(r.classId||''); $('#btnCancelEdit').hidden=false; $('#btnSave').textContent='保存修改'; $('#dupHint').hidden=true;
   paintScores(); location.hash='score'; window.scrollTo(0,0);
@@ -155,10 +182,18 @@ async function saveForm(e){
   const miss=[]; if(!date) miss.push('看课日期'); if(!lesson) miss.push('Lesson ID'); if(!cls) miss.push('Class ID');
   const unset=S.scores.map((v,i)=>v==null?SHORT[i]:null).filter(Boolean); if(unset.length) miss.push('维度：'+unset.join('、'));
   if(miss.length){ toast('还没填：'+miss.join('；')); return; }
+  const noWhy=S.scores.map((v,i)=>needReason(v)&&!(S.reasons[i]||'').trim()?i:-1).filter(i=>i>=0);
+  if(noWhy.length){ noWhy.forEach(i=>document.querySelector(`[data-why="${i}"]`).classList.add('miss'));
+    document.querySelector(`[data-why="${noWhy[0]}"] input`).focus();
+    toast('打 ≤6 或 ≥9 分要写原因：'+noWhy.map(i=>SHORT[i]).join('、')); return; }
+  readIssueRows();
+  const iss=S.issueRows.filter(x=>(x.description||'').trim()||(x.time||'').trim());
+  if(iss.some(x=>!(x.description||'').trim())){ toast('有问题只填了时间点，请补上问题描述或删掉这一行'); return; }
   if(!S.editing && checkDup()){ toast('这节课你已打过分，请编辑原记录'); return; }
   const row={date,type:$('#f-type').value,level:$('#f-level').value,lesson,class_id:cls,teacher:$('#f-teacher').value,
     country:$('#f-country').value.trim(),done:$('#f-done').value,camera:$('#f-cam').value,url:$('#f-url').value.trim(),
-    s:S.scores.slice(),total:weighted(S.scores),hl:$('#f-hl').value.trim(),issues:$('#f-issues').value.replace(/\s+$/,''),sugg:$('#f-sugg').value.trim()};
+    s:S.scores.slice(),total:weighted(S.scores),issues:$('#f-issues').value.replace(/\s+$/,'')||null,sugg:$('#f-sugg').value.trim(),
+    reasons:S.reasons.map(x=>(x||'').trim()||null),rubric:RUBRIC};
   const btn=$('#btnSave'); btn.disabled=true;
   try{
     let saved;
@@ -166,6 +201,7 @@ async function saveForm(e){
     else saved=fromDb(await API.insertScore(Object.assign({user_id:S.uid},row)));
     const put=arr=>{ const i=arr.findIndex(r=>r.id===saved.id); if(i>=0) arr[i]=saved; else arr.push(saved); };
     put(S.mine); if(S.isAdmin) put(S.all);
+    try{ await saveIssues(saved.id, iss); }catch(err){ toast('分数已保存，但问题没有保存成功：'+errMsg(err)+'。请在"我的记录"里编辑这条再保存一次'); return; }
     const wasTask=S.fromTask&&!S.editing;
     toast(S.editing?'已保存修改':(wasTask?'已保存，复评任务已完成':'已保存')); resetForm(false);
     if(wasTask){ await loadTasks(); location.hash='review'; }
@@ -173,12 +209,36 @@ async function saveForm(e){
   finally{ btn.disabled=false; }
 }
 
-function addIssueLine(){
-  const t=$('#b-time').value.trim(), x=$('#b-text').value.trim(), r=$('#b-root').value, sev=$('#b-sev').checked;
-  if(!x){ toast('先写现象'); return; }
-  const line=[t||'—',x.replace(/[|｜\n]/g,' '),r].join('｜')+(sev?'｜严重':'');
-  const ta=$('#f-issues'); ta.value=(ta.value.replace(/\s+$/,'')?ta.value.replace(/\s+$/,'')+'\n':'')+line;
-  $('#b-time').value=''; $('#b-text').value=''; $('#b-sev').checked=false; $('#b-text').focus();
+function renderIssueRows(){
+  const box=$('#issueRows'); if(!box) return;
+  box.innerHTML=S.issueRows.length?S.issueRows.map((x,k)=>`<div class="irow" data-k="${k}">
+    <input type="text" data-f="time" value="${esc(x.time)}" placeholder="07:40" aria-label="时间点">
+    <input type="text" data-f="description" value="${esc(x.description)}" maxlength="500" placeholder="环节 + 现象 + 期望" aria-label="问题描述">
+    <select data-f="root" aria-label="根因">${ROOTS.map(r=>`<option ${x.root===r?'selected':''}>${r}</option>`).join('')}</select>
+    <select data-f="priority" aria-label="优先级">${PRIS.map(p=>`<option ${x.priority===p?'selected':''}>${p}</option>`).join('')}</select>
+    <button class="btn sm danger" type="button" data-act="rm" aria-label="删除这条问题">删除</button></div>`).join('')
+    :'<p class="hint" style="margin:0">没有需要跟进的问题就不用填。</p>';
+}
+function readIssueRows(){
+  document.querySelectorAll('#issueRows .irow').forEach(row=>{ const x=S.issueRows[+row.dataset.k]; if(!x) return;
+    row.querySelectorAll('[data-f]').forEach(el=>{ x[el.dataset.f]=el.value; }); });
+}
+function addIssueRow(){ readIssueRows(); S.issueRows.push({time:'',description:'',root:'课程',priority:'P2'}); renderIssueRows();
+  const r=document.querySelector('#issueRows .irow:last-child [data-f="time"]'); if(r) r.focus(); }
+async function saveIssues(scoreId, list){
+  const before=S.issuesBy[scoreId]||[]; const keep=list.filter(x=>x.id).map(x=>x.id);
+  const gone=before.filter(x=>keep.indexOf(x.id)<0).map(x=>x.id);
+  if(gone.length) await API.deleteIssues(gone);
+  const out=[];
+  for(const [k,x] of list.entries()){
+    const row={time:(x.time||'').trim()||null,description:x.description.trim(),root:x.root,priority:x.priority,pos:k};
+    if(x.id){ const old=before.find(b=>b.id===x.id);
+      if(old&&old.time===row.time&&old.description===row.description&&old.root===row.root&&old.priority===row.priority&&old.pos===k) out.push(old);
+      else out.push(await API.updateIssue(x.id,row)); }
+  }
+  const fresh=list.map((x,k)=>x.id?null:{score_id:scoreId,user_id:S.uid,time:(x.time||'').trim()||null,description:x.description.trim(),root:x.root,priority:x.priority,pos:k}).filter(Boolean);
+  if(fresh.length) out.push(...await API.insertIssues(fresh));
+  S.issuesBy[scoreId]=out.sort((a,b)=>(a.pos||0)-(b.pos||0));
 }
 /* ---------------- my records ---------------- */
 function renderMine(){
@@ -191,7 +251,7 @@ function renderMine(){
   if(!rows.length){ box.innerHTML='<div class="empty">还没有记录。到"打分"页填写第一节课，保存后会出现在这里。</div>'; return; }
   box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
     rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
-      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td><td class="num">${countLines(r.issues)}</td>
+      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td><td class="num">${issueCount(r)}</td>
       <td class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="edit" type="button">编辑</button><button class="btn sm danger" data-act="del" type="button">删除</button></td></tr>
       ${S.openRow===r.id?`<tr class="detail"><td colspan="17">${detailText(r)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
   box.onclick=async e=>{
@@ -200,13 +260,22 @@ function renderMine(){
     if(act==='edit'){ loadIntoForm(r); return; }
     if(act==='del'){ const b=e.target.closest('button');
       if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='确认删除'; setTimeout(()=>{ if(b.isConnected){ b.dataset.armed=''; b.textContent='删除'; } },3000); return; }
-      try{ await API.deleteScore(r.id); S.mine=S.mine.filter(x=>x.id!==r.id); S.all=S.all.filter(x=>x.id!==r.id); toast('已删除'); renderMine(); }catch(e){ toast(errMsg(e)); } return; }
+      try{ await API.deleteScore(r.id); S.mine=S.mine.filter(x=>x.id!==r.id); S.all=S.all.filter(x=>x.id!==r.id); delete S.issuesBy[r.id]; toast('已删除'); renderMine(); }catch(e){ toast(errMsg(e)); } return; }
     S.openRow=(S.openRow===r.id)?null:r.id; renderMine();
   };
 }
 function countLines(t){ return (t||'').split('\n').filter(x=>x.trim()).length; }
+function issueCount(r){ return (S.issuesBy[r.id]||[]).length+countLines(r.issues); }
 function detailText(r){
-  return `<b>亮点</b>\n${esc(r.hl||'—')}\n\n<b>问题</b>\n${esc(r.issues||'—')}\n\n<b>优化建议</b>\n${esc(r.sugg||'—')}${r.url?`\n\n<b>回放</b> <a href="${esc(r.url)}" target="_blank" rel="noopener">打开回放</a>`:''}`;
+  const why=(r.reasons||[]).map((x,i)=>x?`${SHORT[i]} ${r.s&&r.s[i]!=null?r.s[i]:'—'} 分：${esc(x)}`:null).filter(Boolean);
+  const st=S.issuesBy[r.id]||[];
+  let h='';
+  if(why.length) h+=`<b>打分原因</b>\n${why.join('\n')}\n\n`;
+  h+=`<b>问题</b>\n${st.length?st.map(x=>`${x.priority} · ${esc(x.root)}${x.time?' · '+esc(x.time):''}｜${esc(x.description)}${x.status==='synced'?'（已同步）':x.status==='ignored'?'（已忽略）':''}`).join('\n'):''}${r.issues?(st.length?'\n':'')+esc(r.issues):''}${!st.length&&!r.issues?'—':''}`;
+  if(r.hl) h+=`\n\n<b>亮点（旧记录）</b>\n${esc(r.hl)}`;
+  if(r.sugg) h+=`\n\n<b>优化建议</b>\n${esc(r.sugg)}`;
+  if(r.url) h+=`\n\n<b>回放</b> <a href="${esc(r.url)}" target="_blank" rel="noopener">打开回放</a>`;
+  return h;
 }
 /* ---------------- data for board ---------------- */
 function memberById(uid){ return S.members.find(m=>m.user_id===uid)||(S.member&&S.member.user_id===uid?S.member:null); }
@@ -220,7 +289,11 @@ function revKind(id){ if(id.indexOf('import:')===0) return '首批导入'; const
 function roleOf(id){ if(id.indexOf('import:')===0) return id.slice(7); const m=memberById(id); return m?m.compare_role:'none'; }
 const ROLE_TXT={regular:'常规打分者',expert:'专家',none:'不参与对比'};
 
-function inRange(r){ const f=S.filter; if(f.from&&(r.date||'')<f.from) return false; if(f.to&&(r.date||'')>f.to) return false; if(f.type&&r.type!==f.type) return false; return true; }
+function inRange(r){ const f=S.filter; if(f.from&&(r.date||'')<f.from) return false; if(f.to&&(r.date||'')>f.to) return false; if(f.type&&r.type!==f.type) return false; if(f.level&&r.level!==f.level) return false; return true; }
+function allIssues(r){
+  const st=(S.issuesBy[r.id]||[]).map(x=>({ok:true,structured:true,time:x.time||'',text:x.description,root:x.root,pri:x.priority,status:x.status,sev:x.priority==='P0'}));
+  return st.concat(parseIssues(r).map(x=>Object.assign(x,{pri:x.sev?'P0':'',status:''})));
+}
 function parseIssues(r){
   const lines=(r.issues||'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
   return lines.map(l=>{ const n=l.replace(/\|/g,'｜'); const p=n.split('｜').map(x=>x.trim());
@@ -287,6 +360,7 @@ function renderBoard(){
     <div class="kpi"><span class="v">${P.length}</span><span class="l">打分者 / 专家配对</span></div>
     <div class="kpi"><span class="v">${f1(avg(shown.map(r=>r.total)))}</span><span class="l">平均总分</span></div></div>`;
   h+=progress(all);
+  h+=levelCard(shown);
   // consistency
   h+=`<div class="card"><h2>打分一致性<small>按 Class ID 配对常规打分者与专家；单周只作预警，累计约 40 节再判断是否达标</small></h2>`;
   if(!P.length) h+='<div class="empty">所选范围内还没有同一节课的常规打分者和专家双人记录。</div>';
@@ -304,6 +378,7 @@ function renderBoard(){
       return `<div class="tbl"><table><thead><tr><th>${label}</th><th class="num">配对</th><th class="num">平均差</th><th class="num">±5 分内</th><th class="num">平均分差</th></tr></thead><tbody>${
         Object.keys(m).sort().map(k=>{ const s2=stats(m[k]); return `<tr><td>${esc(k)}</td><td class="num">${s2.n}</td><td class="num">${sgn(s2.diff)}</td><td class="num">${pct(s2.pass)}</td><td class="num">${f2(s2.mae)}</td></tr>`; }).join('')}</tbody></table></div>`; };
     h+=`<div class="two">${grp(p=>p.n.teacher,'老师')}${grp(p=>revName(p.n.rev),'打分者')}</div>`;
+    h+=`<div class="two">${grp(p=>p.n.level,'级别')}<div></div></div>`;
     // per dimension
     h+=`<div class="tbl"><table><thead><tr><th>维度</th><th class="num">打分者均分</th><th class="num">专家均分</th><th class="num">差（打分者 − 专家）</th><th class="num">完全一致</th><th class="num">差 ≤1</th><th class="num">打分者更高</th><th class="num">专家更高</th></tr></thead><tbody>${
       DIMS.map((d,i)=>{ const v=P.filter(p=>typeof p.n.s[i]==='number'&&typeof p.e.s[i]==='number'); if(!v.length) return '';
@@ -311,29 +386,33 @@ function renderBoard(){
         return `<tr><td>${esc(d.n)}</td><td class="num">${f1(a)}</td><td class="num">${f1(b)}</td><td class="num">${sgn(a-b)}</td><td class="num">${pct(v.filter(p=>p.n.s[i]===p.e.s[i]).length/v.length)}</td><td class="num">${pct(v.filter(p=>Math.abs(p.n.s[i]-p.e.s[i])<=1).length/v.length)}</td><td class="num">${v.filter(p=>p.n.s[i]>p.e.s[i]).length}</td><td class="num">${v.filter(p=>p.n.s[i]<p.e.s[i]).length}</td></tr>`; }).join('')}</tbody></table></div>`;
   }
   h+='</div>';
+  h+=disagreeCard(P);
   // reviewer overview
   const byRev={}; shown.forEach(r=>(byRev[r.rev]=byRev[r.rev]||[]).push(r));
   h+=`<div class="card"><h2>打分人概览</h2><div class="tbl"><table><thead><tr><th>打分人</th><th>身份</th><th>对比角色</th><th class="num">节数</th><th class="num">体验 / 正式</th><th>级别</th><th class="num">平均总分</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th>最近看课</th></tr></thead><tbody>${
     Object.keys(byRev).map(id=>{ const L=byRev[id]; return `<tr><td>${esc(revName(id))}</td><td>${revKind(id)}</td><td>${ROLE_TXT[L[0].role]||''}</td><td class="num">${L.length}</td><td class="num">${L.filter(r=>r.type==='体验课').length} / ${L.filter(r=>r.type==='正式课').length}</td><td>${levelMix(L)}</td><td class="num">${f1(avg(L.map(r=>r.total)))}</td>${
       DIMS.map((_,i)=>`<td class="num">${f1(avg(L.map(r=>r.s&&r.s[i])))}</td>`).join('')}<td class="mono">${esc(L.map(r=>r.date).sort().pop()||'')}</td></tr>`; }).join('')}</tbody></table></div></div>`;
   // issues
-  const iss=[]; shown.forEach(r=>parseIssues(r).forEach(x=>iss.push(Object.assign({r},x))));
+  const iss=[]; shown.forEach(r=>allIssues(r).forEach(x=>iss.push(Object.assign({r},x))));
   const fmt=iss.filter(x=>x.ok), unf=iss.length-fmt.length; const list=S.includeUnfmt?iss:fmt;
   const cnt={}; fmt.forEach(x=>cnt[x.root]=(cnt[x.root]||0)+1);
-  h+=`<div class="card"><h2>问题汇总<small>来自"问题"栏中按"时间点｜现象｜根因"填写的行</small></h2>
+  const pc={}; fmt.forEach(x=>{ if(x.pri) pc[x.pri]=(pc[x.pri]||0)+1; });
+  const pend=fmt.filter(x=>x.structured&&x.status==='new').length;
+  h+=`<div class="card"><h2>问题汇总<small>打分时逐条记录的问题，以及旧记录里按格式填写的行</small></h2>
+    <p class="hint" style="margin-top:0">优先级：${PRIS.map(p=>`${p} ${pc[p]||0}`).join(' · ')}　|　待同步到问题反馈池：${pend} 条</p>
     <div class="kpis">${ROOTS.map(k=>`<div class="kpi"><span class="v">${cnt[k]||0}</span><span class="l">${k} → ${ROOT_TO[k]}</span></div>`).join('')}</div>
     <div class="row"><span class="hint">共 ${fmt.length} 条按格式填写${unf?`；另有 ${unf} 行未按格式（多为首批导入的历史记录）`:''}</span><span class="spacer"></span>
       <label class="row hint" style="gap:4px"><input type="checkbox" id="incUnf" ${S.includeUnfmt?'checked':''}> 包含未按格式的行</label>
-      <button class="btn sm" type="button" id="copyIss" ${list.length?'':'disabled'}>复制为多维表格格式</button></div>`;
+      <a class="btn sm" href="#sync">去同步问题</a></div>`;
   if(list.length){
     h+=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>Lesson</th><th>老师</th><th>打分人</th><th>时间点</th><th>现象</th><th>根因</th><th>交给</th></tr></thead><tbody>${
-      list.slice().sort((a,b)=>(b.r.date||'').localeCompare(a.r.date||'')).slice(0,300).map(x=>`<tr><td class="mono">${esc(x.r.date)}</td><td class="mono">${esc(x.r.lesson)}</td><td>${esc(x.r.teacher)}</td><td>${esc(revName(x.r.rev))}</td><td class="mono">${esc(x.time)}</td><td>${esc(x.text)}${x.sev?' <span class="pill bad">严重</span>':''}</td><td>${esc(x.root)}</td><td>${esc(ROOT_TO[x.root]||'按格式重写')}</td></tr>`).join('')}</tbody></table></div>`;
+      list.slice().sort((a,b)=>(b.r.date||'').localeCompare(a.r.date||'')).slice(0,300).map(x=>`<tr><td class="mono">${esc(x.r.date)}</td><td class="mono">${esc(x.r.lesson)}</td><td>${esc(x.r.teacher)}</td><td>${esc(revName(x.r.rev))}</td><td class="mono">${esc(x.time)}</td><td>${x.pri?`<span class="pill ${x.pri==='P0'?'bad':x.pri==='P1'?'warn':'neu'}">${x.pri}</span> `:''}${esc(x.text)}${x.status==='synced'?' <span class="hint">已同步</span>':''}</td><td>${esc(x.root)}</td><td>${esc(ROOT_TO[x.root]||'按格式重写')}</td></tr>`).join('')}</tbody></table></div>`;
     if(list.length>300) h+=`<p class="hint">表格只显示最近 300 条；复制时包含全部 ${list.length} 条。</p>`;
   } else h+='<div class="empty">所选范围内还没有按格式填写的问题。</div>';
   h+='</div>';
   // all records
   const recs=shown.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看亮点和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="csv">导出 CSV</button></div>
+  h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看打分原因和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="csv">导出 CSV</button></div>
     <div class="tbl"><table><thead><tr><th>看课日期</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
     recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td class="mono">${esc(r.date)}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
       (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="16">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
@@ -341,9 +420,9 @@ function renderBoard(){
   box.innerHTML=h;
   const ax=$('#progAxis'); if(ax) ax.onclick=e=>{ const b=e.target.closest('button'); if(b){ S.progAxis=b.dataset.a; renderBoard(); } };
   const inc=$('#incUnf'); if(inc) inc.onchange=()=>{ S.includeUnfmt=inc.checked; renderBoard(); };
-  const cp=$('#copyIss'); if(cp) cp.onclick=()=>copyIssues(list);
   $('#csv').onclick=()=>exportCsv(recs);
   box.querySelectorAll('tr[data-k]').forEach(tr=>tr.onclick=()=>{ S.openRow=(S.openRow===tr.dataset.k)?null:tr.dataset.k; renderBoard(); });
+  box.querySelectorAll('tr[data-pair]').forEach(tr=>tr.onclick=()=>{ S.openPair=(S.openPair===tr.dataset.pair)?null:tr.dataset.pair; renderBoard(); });
 }
 function levelMix(L){ const m={}; L.forEach(r=>{ if(r.level) m[r.level]=(m[r.level]||0)+1; }); return Object.keys(m).sort().map(k=>`${esc(k)}×${m[k]}`).join(' · ')||'—'; }
 function needsAttn(r){ return (r.total!=null&&r.total<60)||(r.s||[]).some(v=>typeof v==='number'&&v<6); }
@@ -357,7 +436,7 @@ function progress(all){
   const days={}; L.forEach(r=>{ const k=key(r)||'未填'; (days[k]=days[k]||[]).push(r); });
   const ds=Object.keys(days).sort().reverse(); const mx=Math.max(...ds.map(d=>days[d].length));
   h+=`<div class="tbl"><table><thead><tr><th>日期</th><th class="num">打分人数</th><th>完成节数</th><th class="num">体验 / 正式</th><th>级别</th><th class="num">未完课</th><th class="num">平均总分</th><th class="num">问题条数</th><th class="num">需关注</th></tr></thead><tbody>${
-    ds.map(d=>{ const D=days[d]; const at=D.filter(needsAttn).length; return `<tr><td class="mono">${esc(d)}</td><td class="num">${new Set(D.map(r=>r.rev)).size}</td><td><div class="barc"><i style="width:${Math.max(4,Math.round(D.length/mx*120))}px"></i><b>${D.length}</b></div></td><td class="num">${D.filter(r=>r.type==='体验课').length} / ${D.filter(r=>r.type==='正式课').length}</td><td>${levelMix(D)}</td><td class="num">${D.filter(r=>r.done==='未完课').length}</td><td class="num">${f1(avg(D.map(r=>r.total)))}</td><td class="num">${D.reduce((a,r)=>a+countLines(r.issues),0)}</td><td class="num${at?' low':''}">${at}</td></tr>`; }).join('')}</tbody></table></div>
+    ds.map(d=>{ const D=days[d]; const at=D.filter(needsAttn).length; return `<tr><td class="mono">${esc(d)}</td><td class="num">${new Set(D.map(r=>r.rev)).size}</td><td><div class="barc"><i style="width:${Math.max(4,Math.round(D.length/mx*120))}px"></i><b>${D.length}</b></div></td><td class="num">${D.filter(r=>r.type==='体验课').length} / ${D.filter(r=>r.type==='正式课').length}</td><td>${levelMix(D)}</td><td class="num">${D.filter(r=>r.done==='未完课').length}</td><td class="num">${f1(avg(D.map(r=>r.total)))}</td><td class="num">${D.reduce((a,r)=>a+issueCount(r),0)}</td><td class="num${at?' low':''}">${at}</td></tr>`; }).join('')}</tbody></table></div>
     <p class="hint">需关注 = 总分低于 60 或有维度低于 6 分的课。${scored?'首批导入的记录没有打分时间，按看课日期计。':''}</p>`;
   const cols=ds.slice(0,14).reverse(); const revs=[...new Set(L.map(r=>r.rev))];
   h+=`<h3 style="margin:14px 0 6px;font-size:14px">打分人 × 日期${ds.length>14?' <small class="hint">（显示最近 14 天，合计为所选范围全部）</small>':''}</h3><div class="tbl mx"><table><thead><tr><th>打分人</th>${cols.map(d=>`<th class="num">${esc(d.slice(5))}</th>`).join('')}<th class="num">合计</th></tr></thead><tbody>${
@@ -376,8 +455,9 @@ function copyIssues(list){
 }
 function exportCsv(recs){
   const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-  const head=['看课日期','打分日期','打分人','身份','对比角色','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分','亮点','问题','优化建议','回放链接'];
-  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.date,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,r.hl,r.issues,r.sugg,r.url].map(q).join(',')));
+  const head=['看课日期','打分日期','打分人','身份','对比角色','评分标准','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分',...DIMS.map(d=>d.n+'·原因'),'问题','优化建议','亮点（旧）','回放链接'];
+  const issTxt=r=>(S.issuesBy[r.id]||[]).map(x=>`${x.priority}｜${x.root}｜${x.time||'—'}｜${x.description}`).concat(r.issues?[r.issues]:[]).join('\n');
+  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.date,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',r.rubric||'V1.8',r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='TQA打分记录_'+today()+'.csv'; document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -417,7 +497,9 @@ function cmpHtml(t){
     DIMS.map((dm,i)=>{ const x=df(r.s[i],e.s[i]); return `<tr><td>${esc(dm.n)}</td>${cols.map(c=>`<td class="num">${c.s[i]==null?'—':c.s[i]}</td>`).join('')}<td class="num${x!=null&&Math.abs(x)>1?' low':''}">${x==null?'—':sgn(x).replace('.00','')}</td></tr>`; }).join('')}
     <tr><td><b>加权总分</b></td>${cols.map(c=>`<td class="num"><b>${f1(c.total)}</b></td>`).join('')}<td class="num${df(r.total,e.total)!=null&&Math.abs(df(r.total,e.total))>5?' low':''}"><b>${df(r.total,e.total)==null?'—':sgn(df(r.total,e.total))}</b></td></tr></tbody></table></div>`;
   if(!me) h+='<p class="hint">没找到专家对这节课的记录。</p>';
-  d.forEach(x=>{ h+=`<div style="white-space:pre-wrap"><b>${esc(x.who)} 的问题</b>\n${esc(x.issues||'—')}${x.hl?`\n<b>亮点</b>\n${esc(x.hl)}`:''}${x.sugg?`\n<b>优化建议</b>\n${esc(x.sugg)}`:''}</div>`; });
+  d.forEach(x=>{ const why=(x.reasons||[]).map((w,i)=>w?`${SHORT[i]}：${esc(w)}`:null).filter(Boolean);
+    const il=(x.issue_list||[]).map(q=>`${q.priority} · ${esc(q.root)}${q.time?' · '+esc(q.time):''}｜${esc(q.description)}`);
+    h+=`<div style="white-space:pre-wrap"><b>${esc(x.who)} 的打分原因</b>\n${why.length?why.join('\n'):'—'}\n<b>${esc(x.who)} 的问题</b>\n${il.concat(x.issues?[esc(x.issues)]:[]).join('\n')||'—'}${x.hl?`\n<b>亮点</b>\n${esc(x.hl)}`:''}${x.sugg?`\n<b>优化建议</b>\n${esc(x.sugg)}`:''}</div>`; });
   return h+'</div>';
 }
 function taskRow(t,isOpen){
@@ -515,6 +597,121 @@ function readReviewCfg(){
   return R;
 }
 
+/* ---------------- board: by level ---------------- */
+function levelCard(L){
+  const lv=[...new Set(L.map(r=>r.level||'未填'))].sort((a,b)=>(LEVELS.indexOf(a)<0?99:LEVELS.indexOf(a))-(LEVELS.indexOf(b)<0?99:LEVELS.indexOf(b)));
+  let h=`<div class="card"><h2>按级别<small>所选范围内每个级别的看课数量和分数；"仅留档"记录只计入节数</small></h2>`;
+  if(!L.length) return h+'<div class="empty">所选范围内没有打分记录。</div></div>';
+  const mx=Math.max(...lv.map(l=>L.filter(r=>(r.level||'未填')===l).length));
+  const P=pairs(L);
+  h+=`<div class="tbl"><table><thead><tr><th>级别</th><th>打分节数</th><th class="num">课程数</th><th class="num">打分人</th><th class="num">体验 / 正式</th><th class="num">平均总分</th><th class="num">最低 – 最高</th><th class="num">需关注</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">双人配对</th><th class="num">平均差</th><th class="num">±5 分内</th></tr></thead><tbody>${
+    lv.map(l=>{ const D=L.filter(r=>(r.level||'未填')===l), S2=D.filter(r=>!r.archived), tot=S2.map(r=>r.total).filter(v=>v!=null);
+      const p=P.filter(x=>(x.n.level||'未填')===l), st=stats(p), at=S2.filter(needsAttn).length;
+      return `<tr><td><b>${esc(l)}</b></td><td><div class="barc"><i style="width:${Math.max(4,Math.round(D.length/mx*110))}px"></i><b>${D.length}</b></div></td><td class="num">${new Set(D.map(r=>r.classId)).size}</td><td class="num">${new Set(D.map(r=>r.rev)).size}</td>
+        <td class="num">${D.filter(r=>r.type==='体验课').length} / ${D.filter(r=>r.type==='正式课').length}</td><td class="num"><b>${f1(avg(tot))}</b></td><td class="num">${tot.length?f1(Math.min(...tot))+' – '+f1(Math.max(...tot)):'—'}</td><td class="num${at?' low':''}">${at}</td>
+        ${DIMS.map((_,i)=>{ const a=avg(S2.map(r=>r.s&&r.s[i])); return `<td class="num${a!=null&&a<6?' low':''}">${f1(a)}</td>`; }).join('')}
+        <td class="num">${p.length||'—'}</td><td class="num">${p.length?sgn(st.diff):'—'}</td><td class="num">${p.length?pct(st.pass):'—'}</td></tr>`; }).join('')}</tbody></table></div>`;
+  // level x teacher average
+  const te=[...new Set(L.map(r=>r.teacher||'未填'))].sort();
+  h+=`<h3 style="margin:14px 0 6px;font-size:14px">级别 × 老师 平均总分<small class="hint">（括号内为节数）</small></h3><div class="tbl mx"><table><thead><tr><th>级别</th>${te.map(t=>`<th class="num">${esc(t)}</th>`).join('')}</tr></thead><tbody>${
+    lv.map(l=>`<tr><td>${esc(l)}</td>${te.map(t=>{ const D=L.filter(r=>(r.level||'未填')===l&&(r.teacher||'未填')===t&&!r.archived); return `<td class="num${D.length?'':' zero'}">${D.length?f1(avg(D.map(r=>r.total)))+` <span class="hint">(${D.length})</span>`:'·'}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  return h;
+}
+/* ---------------- board: disagreements ---------------- */
+function disagreeCard(P){
+  const big=P.map(p=>({p,dd:p.n.s.map((v,i)=>(typeof v==='number'&&typeof p.e.s[i]==='number')?v-p.e.s[i]:null)}))
+    .filter(x=>Math.abs(x.p.d)>5||x.dd.some(v=>v!=null&&Math.abs(v)>=2))
+    .sort((a,b)=>Math.abs(b.p.d)-Math.abs(a.p.d)).slice(0,20);
+  let h=`<div class="card"><h2>分歧最大的课<small>总分差超过 5 分或某个维度差 ≥2 分；点开看两人的打分原因</small></h2>`;
+  if(!big.length) return h+'<div class="empty">所选范围内没有明显分歧的配对。</div></div>';
+  h+=`<div class="tbl"><table><thead><tr><th>Class ID</th><th>Lesson</th><th>级别</th><th>老师</th><th>打分者</th><th class="num">打分者</th><th class="num">专家</th><th class="num">差</th><th>差 ≥2 的维度</th></tr></thead><tbody>${
+    big.map(({p,dd})=>{ const k=p.c+'|'+p.n.id; const dims=dd.map((v,i)=>v!=null&&Math.abs(v)>=2?`${SHORT[i]} ${sgn(v).replace('.00','')}`:null).filter(Boolean).join('、')||'—';
+      let row=`<tr class="click" data-pair="${esc(k)}"><td class="mono">${esc(p.c)}</td><td class="mono">${esc(p.n.lesson)}</td><td>${esc(p.n.level)}</td><td>${esc(p.n.teacher)}</td><td>${esc(revName(p.n.rev))}</td><td class="num">${f1(p.n.total)}</td><td class="num">${f1(p.e.total)}</td><td class="num${Math.abs(p.d)>5?' low':''}"><b>${sgn(p.d)}</b></td><td>${esc(dims)}</td></tr>`;
+      if(S.openPair===k){
+        const rs=DIMS.map((d,i)=>{ const a=p.n.reasons&&p.n.reasons[i], b=p.e.reasons&&p.e.reasons[i];
+          if(!(dd[i]!=null&&Math.abs(dd[i])>=2)&&!a&&!b) return '';
+          return `<b>${esc(d.n)}</b><div>${p.n.s[i]??'—'} 分：${esc(a||'（未写原因）')}</div><div>${p.e.s[i]??'—'} 分：${esc(b||'（未写原因）')}</div>`; }).join('');
+        row+=`<tr class="detail"><td colspan="9" style="white-space:normal"><div class="why2"><span></span><b>打分者 · ${esc(revName(p.n.rev))}</b><b>专家 · ${esc(revName(p.e.rev))}</b>${rs||'<span></span><div>两人都没有写打分原因（V1.9 之前的记录没有这一项）。</div><div></div>'}</div></td></tr>`;
+      }
+      return row; }).join('')}</tbody></table></div></div>`;
+  return h;
+}
+/* ---------------- sync issues ---------------- */
+async function loadSync(){
+  const box=$('#syncBody'); if(!box) return;
+  if(S.syncItems==null) box.innerHTML='<div class="empty">正在读取待同步的问题…</div>';
+  try{ S.syncItems=await API.syncPending(); }catch(e){ box.innerHTML=`<div class="empty">读取失败：${esc(errMsg(e))}</div>`; return; }
+  renderSync();
+}
+function syncGroups(){
+  const by={}; (S.syncItems||[]).forEach(x=>{ (by[x.key]=by[x.key]||[]).push(x); });
+  return Object.keys(by).map(k=>{ const it=by[k], f=it[0];
+    const st=S.syncState[k]||(S.syncState[k]={desc:f.description, pri:PRIS.find(p=>it.some(x=>x.priority===p))||'P2', ignore:false, split:false});
+    return {key:k, items:it, lesson:f.lesson, root:f.root, recurring:!!f.g_description, gDesc:f.g_description, gRe:f.g_reappear||0, st}; });
+}
+function syncRows(groups){
+  const E=S.cfg.export||DEFAULT_CFG.export, clean=v=>String(v==null?'':v).replace(/[\t\r\n]+/g,' ').trim();
+  const typeOf=it=>{ const t=[...new Set(it.map(x=>x.type).filter(Boolean))]; return t.length===1?t[0]:'全部课程'; };
+  const note=(g,it)=>`根因：${g.root}（建议交给：${ROOT_TO[g.root]||'—'}）；Class ID：${it.map(x=>x.class_id+(x.time?'（'+x.time+'）':'')).join('、')}；看课日期：${[...new Set(it.map(x=>x.date))].join('、')}${it.some(x=>x.url)?'；回放：'+it.filter(x=>x.url).slice(0,3).map(x=>x.url).join(' '):''}`;
+  const out=[];
+  groups.forEach(g=>{ const parts=g.st.split?g.items.map(x=>({desc:x.description,it:[x]})):[{desc:g.st.desc,it:g.items}];
+    parts.forEach(({desc,it})=>{ out.push([`Lesson ${g.lesson} · ${desc}${it.length>1?`（出现 ${it.length} 节）`:''}`, E.module, [...new Set(it.map(x=>x.who))].join('、'), E.channel, E.local, '', g.st.pri, typeOf(it), '', '', '', note(g,it)].map(clean).join('\t')); }); });
+  return out;
+}
+function recurNote(g){ const act=g.items.filter(x=>x); const cls=act.map(x=>x.class_id).join('、');
+  return g.gRe>=1?`仍在反复高频出现（${today()} 又出现 ${act.length} 节：Class ${cls}）`:`又出现 ${act.length} 节（${today()}：Class ${cls}）`; }
+function copyText(txt,msg){
+  const done=ok=>toast(ok?msg:'复制失败，请手动选中复制');
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>done(true)).catch(()=>fallback());
+  else fallback();
+  function fallback(){ const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); let ok=false; try{ ok=document.execCommand('copy'); }catch(_){} ta.remove(); done(ok); }
+}
+function renderSync(){
+  const box=$('#syncBody'); if(!box) return;
+  const G=syncGroups(), NG=G.filter(g=>!g.recurring), RG=G.filter(g=>g.recurring);
+  const live=g=>!g.st.ignore;
+  if(!G.length){ box.innerHTML='<div class="card"><div class="empty">没有待同步的问题。打分人记录的新问题会出现在这里。</div></div>'; return; }
+  const nRows=syncRows(NG.filter(live)).length;
+  const items=g=>`<details><summary>${g.items.length} 条原始记录</summary><div class="tbl"><table><thead><tr><th>Class ID</th><th>看课日期</th><th>时间点</th><th>问题描述</th><th>优先级</th><th>记录人</th></tr></thead><tbody>${
+    g.items.map(x=>`<tr><td class="mono">${esc(x.class_id)}</td><td class="mono">${esc(x.date)}</td><td class="mono">${esc(x.time||'')}</td><td>${esc(x.description)}</td><td>${esc(x.priority)}</td><td>${esc(x.who)}</td></tr>`).join('')}</tbody></table></div></details>`;
+  let h=`<div class="card"><div class="row"><h2>第 1 步 · 新问题<small>${NG.length} 组，合计 ${NG.reduce((a,g)=>a+g.items.length,0)} 条</small></h2><span class="spacer"></span>
+    <button class="btn sm primary" type="button" id="syncCopyAll" ${nRows?'':'disabled'}>复制全部（${nRows} 行）</button></div>
+    <p class="hint" style="margin-top:0">复制后到问题反馈池粘贴（从"问题描述"列开始），负责人在 Lark 里手动选。不需要同步的组点"忽略"。</p>`;
+  h+=NG.length?NG.map(g=>`<div class="sg${g.st.ignore?' ign':''}" data-key="${esc(g.key)}"><div class="top">
+      <input type="text" data-sf="desc" value="${esc(g.st.desc)}" aria-label="问题描述（会出现在反馈池）" ${g.st.ignore?'disabled':''}>
+      <div class="row" style="flex-wrap:nowrap"><select data-sf="pri" aria-label="优先级" ${g.st.ignore?'disabled':''}>${PRIS.map(p=>`<option ${g.st.pri===p?'selected':''}>${p}</option>`).join('')}</select>
+        <button class="btn sm" type="button" data-sa="ign">${g.st.ignore?'取消忽略':'忽略'}</button></div></div>
+      <div class="meta"><span>Lesson ${esc(g.lesson)}</span><span>根因 ${esc(g.root)} → ${esc(ROOT_TO[g.root]||'')}</span><span>出现 ${g.items.length} 节</span>${g.items.length>1?`<label class="row" style="gap:4px"><input type="checkbox" data-sa="split" ${g.st.split?'checked':''}> 拆成 ${g.items.length} 行分别贴</label>`:''}</div>
+      ${items(g)}</div>`).join(''):'<div class="empty">没有新问题。</div>';
+  h+='</div>';
+  h+=`<div class="card"><h2>第 2 步 · 又出现的问题<small>${RG.length} 组；这些问题已在反馈池里，只需在原来那一行的"备注说明"后追加</small></h2>`;
+  h+=RG.length?RG.map(g=>`<div class="sg${g.st.ignore?' ign':''}" data-key="${esc(g.key)}"><div class="top"><div><b>${esc(g.gDesc)}</b><div class="meta"><span>Lesson ${esc(g.lesson)}</span><span>根因 ${esc(g.root)}</span><span>本次 ${g.items.length} 节</span>${g.gRe>=1?'<span class="pill warn">反复出现</span>':''}</div></div>
+      <div class="row" style="flex-wrap:nowrap"><button class="btn sm primary" type="button" data-sa="note" ${g.st.ignore?'disabled':''}>复制备注</button><button class="btn sm" type="button" data-sa="ign">${g.st.ignore?'取消忽略':'忽略'}</button></div></div>
+      <div class="note">${esc(recurNote(g))}</div>${items(g)}</div>`).join(''):'<div class="empty">没有又出现的问题。</div>';
+  h+='</div>';
+  const nLive=G.filter(live).reduce((a,g)=>a+g.items.length,0), nIgn=G.filter(g=>!live(g)).reduce((a,g)=>a+g.items.length,0);
+  h+=`<div class="card"><div class="row"><h2>第 3 步 · 标记已同步</h2><span class="spacer"></span><button class="btn primary" type="button" id="syncMark">全部标记已同步</button></div>
+    <p class="hint" style="margin:0">会把 ${nLive} 条标记为"已同步"${nIgn?`、${nIgn} 条标记为"已忽略"`:''}，下次只显示新增的问题。${S.syncCopied?'':'<b>还没复制第 1 步的内容，确认已经贴进反馈池再标记。</b>'}</p></div>`;
+  box.innerHTML=h;
+  box.querySelectorAll('.sg').forEach(el=>{ const g=G.find(x=>x.key===el.dataset.key); if(!g) return;
+    el.querySelectorAll('[data-sf]').forEach(inp=>inp.addEventListener('change',()=>{ g.st[inp.dataset.sf]=inp.value; renderSync(); }));
+    el.querySelectorAll('[data-sa]').forEach(b=>b.addEventListener(b.type==='checkbox'?'change':'click',()=>{ const a=b.dataset.sa;
+      if(a==='ign'){ g.st.ignore=!g.st.ignore; renderSync(); }
+      if(a==='split'){ g.st.split=b.checked; renderSync(); }
+      if(a==='note') copyText(recurNote(g),'已复制备注，粘到反馈池原来那一行的"备注说明"后面'); })); });
+  const ca=$('#syncCopyAll'); if(ca) ca.onclick=()=>{ const rows=syncRows(NG.filter(live)); copyText(rows.join('\n'),`已复制 ${rows.length} 行，可直接粘贴到问题反馈池`); S.syncCopied=true; renderSync(); };
+  $('#syncMark').onclick=async()=>{ const b=$('#syncMark');
+    if(!S.syncCopied&&NG.some(live)&&b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='还没复制，确定标记？'; setTimeout(()=>{ if(b.isConnected){ b.dataset.armed=''; b.textContent='全部标记已同步'; } },4000); return; }
+    b.disabled=true;
+    const groups=G.filter(live).map(g=>({key:g.key,lesson:g.lesson,root:g.root,description:g.recurring?g.gDesc:g.st.desc,ids:g.items.map(x=>x.id)}));
+    const ign=G.filter(g=>!live(g)).flatMap(g=>g.items.map(x=>x.id));
+    try{ const r=await API.syncApply(groups,ign); S.syncState={}; S.syncCopied=false; toast(`已标记 ${r.synced} 条已同步${r.ignored?`、${r.ignored} 条已忽略`:''}`);
+      if(S.isAdmin){ try{ const iss=await API.issues(null); indexIssues(iss); }catch(_){} }
+      await loadSync(); }
+    catch(e){ toast(errMsg(e)); b.disabled=false; } };
+}
+function indexIssues(list){ const by={}; (list||[]).forEach(x=>{ (by[x.score_id]=by[x.score_id]||[]).push(x); }); Object.values(by).forEach(a=>a.sort((x,y)=>(x.pos||0)-(y.pos||0))); S.issuesBy=by; }
+
 /* ---------------- setup ---------------- */
 function renderSetup(){
   const box=$('#setupBody'); const c=S.cfg; const T=c.targets||DEFAULT_CFG.targets; const E=c.export||DEFAULT_CFG.export;
@@ -528,19 +725,20 @@ function renderSetup(){
       <div class="field"><label for="m-cmp">对比角色</label>${roleSel('id="m-cmp"','regular')}</div>
       <div class="field"><button class="btn primary" type="submit">添加成员</button></div>
     </form>
-    <div class="tbl" style="margin-top:12px"><table><thead><tr><th>名字</th><th>邮箱</th><th>身份</th><th>对比角色</th><th>状态</th><th class="num">记录数</th><th></th></tr></thead><tbody>${
+    <div class="tbl" style="margin-top:12px"><table><thead><tr><th>名字</th><th>邮箱</th><th>身份</th><th>对比角色</th><th>同步问题</th><th>状态</th><th class="num">记录数</th><th></th></tr></thead><tbody>${
       S.members.map(m=>{ const self=m.user_id===S.uid, lockOwner=m.is_owner&&!S.isOwner; const e=esc(m.email);
         return `<tr data-email="${e}"><td><input type="text" data-f="name" value="${esc(m.name||'')}" placeholder="${m.is_owner?'管理员':'未填写'}" maxlength="30" style="max-width:140px" ${lockOwner?'disabled':''}></td>
         <td class="mono">${e}</td>
         <td>${m.is_owner?'管理员（所有者）':`<select data-f="is_admin" ${self?'disabled':''} aria-label="身份"><option value="0" ${m.is_admin?'':'selected'}>打分者</option><option value="1" ${m.is_admin?'selected':''}>管理员</option></select>`}</td>
         <td>${roleSel('data-f="compare_role"',m.compare_role,lockOwner)}</td>
+        <td>${m.is_admin||m.is_owner?'<span class="hint">管理员默认可以</span>':`<label class="row" style="gap:4px"><input type="checkbox" data-f="can_sync" ${m.can_sync?'checked':''}> 可以</label>`}</td>
         <td>${!m.active?'<span class="pill bad">已停用</span>':m.user_id?'<span class="pill good">已开通</span>':'<span class="pill neu">待设置密码</span>'}</td>
         <td class="num">${m.user_id?(cnt[m.user_id]||0):0}</td>
-        <td class="row" style="flex-wrap:nowrap">${m.is_owner||self?'':`<button class="btn sm" type="button" data-act="toggle">${m.active?'停用':'启用'}</button>`}${m.user_id&&!self&&!lockOwner?'<button class="btn sm" type="button" data-act="pw">重设密码</button>':''}${!m.user_id&&!m.is_owner?'<button class="btn sm danger" type="button" data-act="del">删除</button>':''}</td></tr>${S.resetFor===m.email?`<tr class="detail"><td colspan="7"><form class="row" data-reset="${e}" novalidate style="white-space:normal"><span>给 ${esc(m.name||m.email)} 设一个新密码：</span><input type="text" data-newpw placeholder="至少 8 位" style="max-width:180px"><button class="btn sm primary" type="submit">确定</button><button class="btn sm" type="button" data-act="pwcancel">取消</button><span class="hint">设好后把新密码告诉对方，对方登录后可在"我的记录"里自己再改。</span></form></td></tr>`:''}`; }).join('')}</tbody></table></div>
-    <p class="hint">添加后把网址发给同事：第一次打开点"首次使用 · 设置密码"，用这里登记的邮箱设密码即可。停用后对方无法登录打分，已有记录保留。同事忘记密码：点他那一行的"重设密码"。首批导入的 46 节课固定参与对比。</p></div>
+        <td class="row" style="flex-wrap:nowrap">${m.is_owner||self?'':`<button class="btn sm" type="button" data-act="toggle">${m.active?'停用':'启用'}</button>`}${m.user_id&&!self&&!lockOwner?'<button class="btn sm" type="button" data-act="pw">重设密码</button>':''}${!m.user_id&&!m.is_owner?'<button class="btn sm danger" type="button" data-act="del">删除</button>':''}</td></tr>${S.resetFor===m.email?`<tr class="detail"><td colspan="8"><form class="row" data-reset="${e}" novalidate style="white-space:normal"><span>给 ${esc(m.name||m.email)} 设一个新密码：</span><input type="text" data-newpw placeholder="至少 8 位" style="max-width:180px"><button class="btn sm primary" type="submit">确定</button><button class="btn sm" type="button" data-act="pwcancel">取消</button><span class="hint">设好后把新密码告诉对方，对方登录后可在"我的记录"里自己再改。</span></form></td></tr>`:''}`; }).join('')}</tbody></table></div>
+    <p class="hint">添加后把网址发给同事：第一次打开点"首次使用 · 设置密码"，用这里登记的邮箱设密码即可。勾选"同步问题"的成员会多一个「同步问题」页，只能看到问题，看不到分数。停用后对方无法登录打分，已有记录保留。同事忘记密码：点他那一行的"重设密码"。首批导入的 46 节课固定参与对比。</p></div>
   <div class="two">
     <div class="card"><h2>老师名单</h2><div class="field"><label for="s-teachers">用逗号分隔</label><input type="text" id="s-teachers" value="${esc((c.teachers||[]).join(', '))}"></div></div>
-    <div class="card"><h2>问题导出字段<small>"复制为多维表格格式"时使用</small></h2><div class="grid">
+    <div class="card"><h2>问题导出字段<small>「同步问题」复制到反馈池时使用</small></h2><div class="grid">
       <div class="field"><label for="s-module">模块</label><input type="text" id="s-module" value="${esc(E.module)}"></div>
       <div class="field"><label for="s-channel">反馈渠道</label><input type="text" id="s-channel" value="${esc(E.channel)}"></div>
       <div class="field"><label for="s-local">本地化类型</label><input type="text" id="s-local" value="${esc(E.local)}"></div></div></div>
@@ -554,7 +752,7 @@ function renderSetup(){
   $('#addMem').onsubmit=addMember;
   box.querySelectorAll('tr[data-email] [data-f]').forEach(el=>el.addEventListener('change',()=>{
     const email=el.closest('tr').dataset.email, f=el.dataset.f; let v=el.value;
-    if(f==='is_admin') v=v==='1'; if(f==='name') v=v.trim()||null;
+    if(f==='is_admin') v=v==='1'; if(f==='name') v=v.trim()||null; if(f==='can_sync') v=el.checked;
     patchMember(email,{[f]:v}); }));
   box.querySelectorAll('[data-act="pwcancel"]').forEach(b=>b.onclick=()=>{ S.resetFor=null; renderSetup(); });
   box.querySelectorAll('form[data-reset]').forEach(f=>f.onsubmit=async ev=>{ ev.preventDefault(); const pw=f.querySelector('[data-newpw]').value;
@@ -641,7 +839,8 @@ async function afterLogin(session){
   if(!S.member){ $('#deniedText').textContent=`你登录的邮箱是 ${S.email}，还不在打分名单里，或已被停用。请联系管理员后重新登录。`; paintWho(); route(); return; }
   S.isAdmin=!!S.member.is_admin; S.isOwner=!!S.member.is_owner; S.myName=S.member.name||(S.isOwner?'管理员':''); S.needName=!S.myName;
   if(S.needName){ $('#gateTitle').textContent=S.isAdmin?'你是管理员，请先填写名字以便区分':'开始打分前，请先填写你的名字'; $('#g-cancel').hidden=true; $('#g-save').textContent='开始打分'; }
-  S.isExpert=S.member.compare_role==='expert';
+  S.isExpert=S.member.compare_role==='expert'; S.canSync=!!(S.isAdmin||S.member.can_sync);
+  document.querySelector('.tabs a[data-v="sync"]').hidden=!S.canSync;
   document.querySelectorAll('.tabs a[data-v="board"],.tabs a[data-v="setup"]').forEach(a=>a.hidden=!S.isAdmin);
   document.querySelector('.tabs a[data-v="review"]').hidden=!(S.isAdmin||S.isExpert);
   try{ S.cfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_CFG)),(await API.config())||{}); }catch(_){}
@@ -650,19 +849,22 @@ async function afterLogin(session){
 }
 async function loadData(){
   try{
-    if(S.isAdmin){ const [rows,mem]=await Promise.all([API.scores(null),API.members()]); S.all=rows.map(fromDb); S.members=mem; S.mine=S.all.filter(r=>r.user_id===S.uid); }
-    else { S.mine=(await API.scores(S.uid)).map(fromDb); }
+    if(S.isAdmin){ const [rows,mem,iss]=await Promise.all([API.scores(null),API.members(),API.issues(null)]); S.all=rows.map(fromDb); S.members=mem; S.mine=S.all.filter(r=>r.user_id===S.uid); indexIssues(iss); }
+    else { const [rows,iss]=await Promise.all([API.scores(S.uid),API.issues(S.uid)]); S.mine=rows.map(fromDb); indexIssues(iss); }
   }catch(e){ toast(errMsg(e)); }
   await loadTasks();
 }
-function clearState(){ Object.assign(S,{uid:null,email:'',member:null,isAdmin:false,isOwner:false,isExpert:false,myName:'',mine:[],all:[],members:[],needName:false,renaming:false,editing:null,tasks:[],myTasks:[],fromTask:null,cmpOpen:null,cmpData:{}});
-  document.querySelector('.tabs a[data-v="review"]').hidden=true; }
+function clearState(){ Object.assign(S,{canSync:false,issuesBy:{},syncItems:null,syncState:{},syncCopied:false,openPair:null,uid:null,email:'',member:null,isAdmin:false,isOwner:false,isExpert:false,myName:'',mine:[],all:[],members:[],needName:false,renaming:false,editing:null,tasks:[],myTasks:[],fromTask:null,cmpOpen:null,cmpData:{}});
+  document.querySelector('.tabs a[data-v="review"]').hidden=true; document.querySelector('.tabs a[data-v="sync"]').hidden=true; }
 async function logout(){ try{ await API.signOut(); }catch(_){} clearState(); resetForm(false); paintWho(); location.hash='score'; route(); }
 async function boot(){
   buildDims(); fillTeachers($('#f-teacher'),'Kim'); resetForm(false); setAuthMode('login');
   $('#form').addEventListener('submit',saveForm);
   $('#btnReset').onclick=()=>resetForm(false); $('#btnCancelEdit').onclick=()=>resetForm(false);
-  $('#b-add').onclick=addIssueLine; $('#b-text').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addIssueLine(); } });
+  $('#btnAddIssue').onclick=addIssueRow;
+  $('#issueRows').addEventListener('click',e=>{ const b=e.target.closest('[data-act="rm"]'); if(!b) return; readIssueRows(); S.issueRows.splice(+b.closest('.irow').dataset.k,1); renderIssueRows(); });
+  $('#btnSyncRefresh').onclick=async()=>{ const b=$('#btnSyncRefresh'); b.disabled=true; await loadSync(); b.disabled=false; toast('已刷新'); };
+  $('#q-level').onchange=()=>{ S.filter.level=$('#q-level').value; renderBoard(); };
   $('#f-class').addEventListener('input',checkDup);
   $('#presets').onclick=e=>{ const b=e.target.closest('button'); if(b) setPreset(b.dataset.p); };
   ['q-from','q-to'].forEach(id=>$('#'+id).addEventListener('change',()=>{ S.filter.from=$('#q-from').value; S.filter.to=$('#q-to').value; document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed','false')); renderBoard(); }));
