@@ -123,6 +123,7 @@ function buildDims(){
   box.addEventListener('click',e=>{ const b=e.target.closest('.scale button'); if(!b) return;
     const i=+b.dataset.d, v=+b.dataset.v; S.scores[i]=(S.scores[i]===v)?null:v; paintScores(); });
   box.addEventListener('click',e=>{ const o=e.target.closest('[data-open]'); if(!o) return; const w=o.closest('.why'); w.dataset.open='1'; paintScores(); w.querySelector('input').focus(); });
+  box.addEventListener('change',e=>{ if(e.target.closest('[data-wi]')) paintScores(); });
   box.addEventListener('input',e=>{ const x=e.target.closest('[data-wi]'); if(!x) return; S.reasons[+x.dataset.wi]=x.value; x.closest('.why').classList.remove('miss'); });
 }
 function paintScores(){
@@ -134,14 +135,25 @@ function paintScores(){
   if(low.length) f+=` · <span class="pill bad">低于 6 分：${esc(low.join('、'))}</span>`;
   if(t!=null&&t<60) f+=` · <span class="pill bad">总分低于 60</span>`;
   $('#flags').innerHTML=f;
+  const RQ=requiredWhy();
   document.querySelectorAll('[data-why]').forEach(w=>{ const i=+w.dataset.why, v=S.scores[i];
-    w.hidden=v==null; const req=v!=null&&(v<=6||v>=9); w.classList.toggle('req',req);
-    w.querySelector('label').textContent=req?'打分原因（必填）':'打分原因（选填）';
+    w.hidden=v==null; const req=RQ[i]; w.classList.toggle('req',!!req);
+    w.querySelector('label').textContent=req?`打分原因（必填 · ${req}）`:'打分原因（选填）';
     const showInp=req||!!(S.reasons[i]||'').trim()||w.dataset.open==='1';
     w.querySelector('label').hidden=!showInp; w.querySelector('input').hidden=!showInp; w.querySelector('[data-open]').hidden=showInp;
     const inp=w.querySelector('input'); if(inp.value!==(S.reasons[i]||'')) inp.value=S.reasons[i]||''; });
 }
-const needReason = v => v!=null && (v<=6 || v>=9);
+// 每节课固定写 3 条原因：分数最低的 2 个维度 + 分数最高的 1 个维度（同分时优先算已经写了原因的那个）
+function requiredWhy(){
+  const has=i=>!!(S.reasons[i]||'').trim();
+  const idx=S.scores.map((v,i)=>v==null?null:i).filter(i=>i!=null);
+  const out={}; if(idx.length<3) return out;
+  const low=idx.slice().sort((a,b)=>S.scores[a]-S.scores[b]||(has(b)-has(a))||a-b).slice(0,2);
+  low.forEach(i=>out[i]='最低分');
+  const hi=idx.filter(i=>low.indexOf(i)<0).sort((a,b)=>S.scores[b]-S.scores[a]||(has(b)-has(a))||a-b)[0];
+  if(hi!=null) out[hi]='最高分';
+  return out;
+}
 function fillTeachers(sel, cur){
   const list=(S.cfg.teachers||[]).slice(); if(cur&&list.indexOf(cur)<0) list.push(cur);
   sel.innerHTML=list.map(t=>`<option>${esc(t)}</option>`).join('')+'<option value="">其他 / 未知</option>';
@@ -182,10 +194,11 @@ async function saveForm(e){
   const miss=[]; if(!date) miss.push('看课日期'); if(!lesson) miss.push('Lesson ID'); if(!cls) miss.push('Class ID');
   const unset=S.scores.map((v,i)=>v==null?SHORT[i]:null).filter(Boolean); if(unset.length) miss.push('维度：'+unset.join('、'));
   if(miss.length){ toast('还没填：'+miss.join('；')); return; }
-  const noWhy=S.scores.map((v,i)=>needReason(v)&&!(S.reasons[i]||'').trim()?i:-1).filter(i=>i>=0);
+  paintScores(); const RQ=requiredWhy();
+  const noWhy=Object.keys(RQ).map(Number).filter(i=>!(S.reasons[i]||'').trim());
   if(noWhy.length){ noWhy.forEach(i=>document.querySelector(`[data-why="${i}"]`).classList.add('miss'));
     document.querySelector(`[data-why="${noWhy[0]}"] input`).focus();
-    toast('打 ≤6 或 ≥9 分要写原因：'+noWhy.map(i=>SHORT[i]).join('、')); return; }
+    toast('每节课要写 3 条打分原因（最低 2 个 + 最高 1 个维度），还差：'+noWhy.map(i=>SHORT[i]).join('、')); return; }
   readIssueRows();
   const iss=S.issueRows.filter(x=>(x.description||'').trim()||(x.time||'').trim());
   if(iss.some(x=>!(x.description||'').trim())){ toast('有问题只填了时间点，请补上问题描述或删掉这一行'); return; }
@@ -361,6 +374,7 @@ function renderBoard(){
     <div class="kpi"><span class="v">${f1(avg(shown.map(r=>r.total)))}</span><span class="l">平均总分</span></div></div>`;
   h+=progress(all);
   h+=levelCard(shown);
+  h+=spreadCard(shown);
   // consistency
   h+=`<div class="card"><h2>打分一致性<small>按 Class ID 配对常规打分者与专家；单周只作预警，累计约 40 节再判断是否达标</small></h2>`;
   if(!P.length) h+='<div class="empty">所选范围内还没有同一节课的常规打分者和专家双人记录。</div>';
@@ -615,6 +629,23 @@ function levelCard(L){
   const te=[...new Set(L.map(r=>r.teacher||'未填'))].sort();
   h+=`<h3 style="margin:14px 0 6px;font-size:14px">级别 × 老师 平均总分<small class="hint">（括号内为节数）</small></h3><div class="tbl mx"><table><thead><tr><th>级别</th>${te.map(t=>`<th class="num">${esc(t)}</th>`).join('')}</tr></thead><tbody>${
     lv.map(l=>`<tr><td>${esc(l)}</td>${te.map(t=>{ const D=L.filter(r=>(r.level||'未填')===l&&(r.teacher||'未填')===t&&!r.archived); return `<td class="num${D.length?'':' zero'}">${D.length?f1(avg(D.map(r=>r.total)))+` <span class="hint">(${D.length})</span>`:'·'}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  return h;
+}
+/* ---------------- board: score spread ---------------- */
+function spreadCard(L){
+  const by={}; L.filter(r=>!r.archived).forEach(r=>(by[r.rev]=by[r.rev]||[]).push(r));
+  const ids=Object.keys(by); let h=`<div class="card"><h2>打分分布<small>每位打分人的维度分落在 ≤6 / 7–8 / ≥9 的比例；7–8 占比明显变高，可能是在"往中间靠"</small></h2>`;
+  if(!ids.length) return h+'<div class="empty">所选范围内没有打分记录。</div></div>';
+  const dist=R=>{ const v=R.flatMap(r=>(r.s||[]).filter(x=>typeof x==='number')); const n=v.length;
+    return n?{n, lo:v.filter(x=>x<=6).length/n, mid:v.filter(x=>x>=7&&x<=8).length/n, hi:v.filter(x=>x>=9).length/n}:null; };
+  const bar=d=>d?`<div class="stk" title="≤6 ${pct(d.lo)} · 7–8 ${pct(d.mid)} · ≥9 ${pct(d.hi)}"><i class="lo" style="width:${d.lo*100}%"></i><i class="mid" style="width:${d.mid*100}%"></i><i class="hi" style="width:${d.hi*100}%"></i></div>`:'—';
+  const allD=dist(L.filter(r=>!r.archived));
+  h+=`<div class="tbl"><table><thead><tr><th>打分人</th><th>对比角色</th><th class="num">节数</th><th style="min-width:200px">分布</th><th class="num">≤6</th><th class="num">7–8</th><th class="num">≥9</th><th class="num">V1.9 前 7–8</th><th class="num">V1.9 后 7–8</th><th></th></tr></thead><tbody>${
+    ids.map(id=>{ const R=by[id], d=dist(R), pre=dist(R.filter(r=>r.rubric!=='V1.9')), post=dist(R.filter(r=>r.rubric==='V1.9'));
+      const flag=pre&&post&&post.n>=40&&post.mid-pre.mid>=0.10;
+      return `<tr><td>${esc(revName(id))}</td><td>${ROLE_TXT[R[0].role]||''}</td><td class="num">${R.length}</td><td>${bar(d)}</td><td class="num">${pct(d&&d.lo)}</td><td class="num">${pct(d&&d.mid)}</td><td class="num">${pct(d&&d.hi)}</td><td class="num">${pre?pct(pre.mid):'—'}</td><td class="num">${post?pct(post.mid):'—'}</td><td>${flag?'<span class="pill warn">7–8 占比升高</span>':''}</td></tr>`; }).join('')}
+    <tr><td><b>全部</b></td><td></td><td class="num">${L.filter(r=>!r.archived).length}</td><td>${bar(allD)}</td><td class="num">${pct(allD&&allD.lo)}</td><td class="num">${pct(allD&&allD.mid)}</td><td class="num">${pct(allD&&allD.hi)}</td><td></td><td></td><td></td></tr></tbody></table></div>
+    <p class="hint">"7–8 占比升高"：V1.9 后已有至少 40 个维度分（约 5 节课），且 7–8 占比比 V1.9 前高 10 个百分点以上。和专家的分布对照着看更准。</p></div>`;
   return h;
 }
 /* ---------------- board: disagreements ---------------- */

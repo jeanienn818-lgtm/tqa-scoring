@@ -140,6 +140,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
 .days{display:flex;gap:4px;flex-wrap:wrap}.days label{display:flex;align-items:center;gap:3px;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
 .rules summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.rules ol{margin:10px 0 0;padding-left:20px;font-size:13.5px}.rules li{margin:5px 0}
 .dim .why{grid-column:1/-1;display:flex;gap:8px;align-items:center}.dim .why input{flex:1;min-width:0}.dim .why label{font-size:12px;color:var(--muted);white-space:nowrap}
+.stk{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--sunk)}.stk i{display:block;height:100%}.stk .lo{background:var(--bad)}.stk .mid{background:var(--faint)}.stk .hi{background:var(--good)}
 .linkbtn{border:0;background:none;color:var(--accent);cursor:pointer;font-size:12.5px;padding:0}
 .dim .why.req label{color:var(--bad);font-weight:600}.dim .why.miss input{border-color:var(--bad)}
 .issues{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
@@ -217,7 +218,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
         <ol>
           <li><b>评的是老师。</b>"老师"指整堂 AI 课的呈现，包括课件内容、语音、识别和产品交互。分数如实反映课堂表现，不因问题的根因调整打分；根因在问题记录里标注。</li>
           <li><b>对照这个学生判断。</b>学生水平低本身不扣分；老师没有根据这个学生的情况调整、没有给机会和支架，才扣分。</li>
-          <li><b>打分原因。</b>打 ≤6 分或 ≥9 分时必须写原因（时间点 + 老师的具体行为），7–8 分可以不写。</li>
+          <li><b>打分原因。</b>每节课写 3 条：分数最低的 2 个维度 + 分数最高的 1 个维度（同分时任选其一），写"时间点 + 老师的具体行为"；其他维度可以选填。</li>
           <li><b>问题只记需要有人去改的事。</b>解释分数的内容写在维度原因里；问题描述写"环节 + 现象 + 期望"。</li>
         </ol>
       </details>
