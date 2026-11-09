@@ -78,7 +78,8 @@ function makeApi(){
   };
 }
 function fromDb(r){ return { id:r.id, user_id:r.user_id, import_role:r.import_role, source:r.source, date:r.date, type:r.type, level:r.level, lesson:r.lesson,
-  classId:r.class_id, teacher:r.teacher, country:r.country, done:r.done, camera:r.camera, url:r.url, s:r.s?r.s.map(Number):Array(8).fill(null), archived:!r.s,
+  classId:r.class_id, teacher:r.teacher, country:r.country, done:r.done, completionDate:r.completion_date, courseVersion:r.course_version,
+  camera:r.camera, url:r.url, s:r.s?r.s.map(Number):Array(8).fill(null), archived:!r.s,
   total:r.total==null?null:Number(r.total), hl:r.hl, issues:r.issues, sugg:r.sugg, rubric:r.rubric||null,
   reasons:Array.isArray(r.reasons)?r.reasons.slice(0,8).concat(Array(8).fill(null)).slice(0,8):Array(8).fill(null),
   createdAt:r.source==='首批导入'?null:r.created_at, updatedAt:r.updated_at }; }
@@ -167,9 +168,15 @@ function fillTeachers(sel, cur){
   sel.innerHTML=list.map(t=>`<option>${esc(t)}</option>`).join('')+'<option value="">其他 / 未知</option>';
   if(cur!=null) sel.value=cur;
 }
+function syncCompletionDate(){
+  const completed=$('#f-done').value==='完课', input=$('#f-completion-date');
+  input.disabled=!completed; input.required=completed; $('#completionDateRequired').hidden=!completed;
+  if(!completed) input.value='';
+}
 function resetForm(keepCourse){
   S.editing=null; S.scores=Array(8).fill(null); if(!keepCourse){ S.fromTask=null; $('#taskHint').hidden=true; }
-  if(!keepCourse){ ['f-lesson','f-class','f-country','f-url'].forEach(id=>$('#'+id).value=''); $('#f-date').value=today(); }
+  if(!keepCourse){ ['f-lesson','f-class','f-country','f-url','f-completion-date','f-version'].forEach(id=>$('#'+id).value=''); $('#f-date').value=today(); }
+  syncCompletionDate();
   ['f-issues','f-sugg'].forEach(id=>$('#'+id).value=''); $('#legacyBox').hidden=true;
   S.reasons=Array(8).fill(''); S.issueRows=[]; renderIssueRows();
   document.querySelectorAll('.why').forEach(w=>{ w.classList.remove('miss'); delete w.dataset.open; });
@@ -179,7 +186,8 @@ function resetForm(keepCourse){
 function loadIntoForm(r){
   S.editing=r.id; $('#f-date').value=r.date||''; $('#f-type').value=r.type||'体验课'; $('#f-level').value=r.level||'Lv1';
   $('#f-lesson').value=r.lesson||''; $('#f-class').value=r.classId||''; fillTeachers($('#f-teacher'),r.teacher||'');
-  $('#f-country').value=r.country||''; $('#f-done').value=r.done||'完课'; $('#f-cam').value=r.camera||'开'; $('#f-url').value=r.url||'';
+  $('#f-country').value=r.country||''; $('#f-done').value=r.done||'完课'; $('#f-completion-date').value=r.completionDate||'';
+  $('#f-version').value=r.courseVersion||''; syncCompletionDate(); $('#f-cam').value=r.camera||'开'; $('#f-url').value=r.url||'';
   $('#f-issues').value=r.issues||''; $('#legacyBox').hidden=!r.issues; $('#f-sugg').value=r.sugg||'';
   S.reasons=(r.reasons||[]).map(x=>x||''); while(S.reasons.length<8) S.reasons.push('');
   S.issueRows=(S.issuesBy[r.id]||[]).map(x=>({id:x.id,time:x.time||'',description:x.description||'',root:x.root,priority:x.priority,status:x.status}));
@@ -200,6 +208,7 @@ async function saveForm(e){
   if(!API||!S.member){ toast('请先登录'); return; }
   const date=$('#f-date').value, lesson=$('#f-lesson').value.trim(), cls=$('#f-class').value.trim();
   const miss=[]; if(!date) miss.push('看课日期'); if(!lesson) miss.push('Lesson ID'); if(!cls) miss.push('Class ID');
+  if($('#f-done').value==='完课'&&!$('#f-completion-date').value) miss.push('完课日期');
   const unset=S.scores.map((v,i)=>v==null?SHORT[i]:null).filter(Boolean); if(unset.length) miss.push('维度：'+unset.join('、'));
   if(miss.length){ toast('还没填：'+miss.join('；')); return; }
   paintScores(); const RQ=requiredWhy();
@@ -212,7 +221,9 @@ async function saveForm(e){
   if(iss.some(x=>!(x.description||'').trim())){ toast('有问题只填了时间点，请补上问题描述或删掉这一行'); return; }
   if(!S.editing && checkDup()){ toast('这节课你已打过分，请编辑原记录'); return; }
   const row={date,type:$('#f-type').value,level:$('#f-level').value,lesson,class_id:cls,teacher:$('#f-teacher').value,
-    country:$('#f-country').value.trim(),done:$('#f-done').value,camera:$('#f-cam').value,url:$('#f-url').value.trim(),
+    country:$('#f-country').value.trim(),done:$('#f-done').value,
+    completion_date:$('#f-done').value==='完课'?$('#f-completion-date').value:null,course_version:$('#f-version').value.trim()||null,
+    camera:$('#f-cam').value,url:$('#f-url').value.trim(),
     s:S.scores.slice(),total:weighted(S.scores),issues:$('#f-issues').value.replace(/\s+$/,'')||null,sugg:$('#f-sugg').value.trim(),
     reasons:S.reasons.map(x=>(x||'').trim()||null),rubric:RUBRIC};
   const btn=$('#btnSave'); btn.disabled=true;
@@ -270,11 +281,11 @@ function renderMine(){
   $('#mineStats').innerHTML=`<div class="kpi"><span class="v">${tdN}</span><span class="l">今天已打</span></div><div class="kpi"><span class="v">${wkN}</span><span class="l">本周已打</span></div><div class="kpi"><span class="v">${S.mine.length}</span><span class="l">累计</span></div>`;
   const rows=S.mine.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.updatedAt||'').localeCompare(a.updatedAt||''));
   if(!rows.length){ box.innerHTML='<div class="empty">还没有记录。到"打分"页填写第一节课，保存后会出现在这里。</div>'; return; }
-  box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
-    rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
+  box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
+    rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
       (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td><td class="num">${issueCount(r)}</td>
       <td class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="edit" type="button">编辑</button><button class="btn sm danger" data-act="del" type="button">删除</button></td></tr>
-      ${S.openRow===r.id?`<tr class="detail"><td colspan="17">${detailText(r)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
+      ${S.openRow===r.id?`<tr class="detail"><td colspan="19">${detailText(r)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
   box.onclick=async e=>{
     const tr=e.target.closest('tr[data-id]'); if(!tr) return; const r=S.mine.find(x=>x.id===tr.dataset.id); if(!r) return;
     const act=e.target.closest('button')&&e.target.closest('button').dataset.act;
@@ -434,10 +445,10 @@ function renderBoard(){
   h+='</div>';
   // all records
   const recs=shown.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看打分原因和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="csv">导出 CSV</button></div>
-    <div class="tbl"><table><thead><tr><th>看课日期</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
-    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td class="mono">${esc(r.date)}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
-      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="16">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
+  h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看打分原因和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="csv">导出当前筛选明细 CSV</button></div>
+    <div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
+    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
+      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="18">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
     ${recs.length>400?`<p class="hint">只显示最近 400 条；导出 CSV 包含全部 ${recs.length} 条。</p>`:''}</div>`;
   box.innerHTML=h;
   const ax=$('#progAxis'); if(ax) ax.onclick=e=>{ const b=e.target.closest('button'); if(b){ S.progAxis=b.dataset.a; renderBoard(); } };
@@ -475,13 +486,15 @@ function copyIssues(list){
     const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
     let ok=false; try{ ok=document.execCommand('copy'); }catch(_){} ta.remove(); toast(ok?'已复制 '+rows.length+' 条':'复制失败，请改用导出 CSV'); });
 }
-function exportCsv(recs){
+function exportCsv(recs, all=false){
   const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-  const head=['看课日期','打分日期','打分人','身份','对比角色','评分标准','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分',...DIMS.map(d=>d.n+'·原因'),'问题','优化建议','亮点（旧）','回放链接'];
+  const head=LANG==='en'
+    ? ['Record ID','Observation Date','Completion Date','Course / Product Version','Scoring Date','Scorer','Role','Comparison Role','Rubric Version','Class Type','Level','Lesson ID','Class ID','Teacher','Country','Completion Status','Camera',...DIMS.map(d=>d.n),'Weighted Total',...DIMS.map(d=>d.n+' · Reason'),'Issues','Improvement Suggestions','Highlights (legacy)','Recording URL']
+    : ['记录 ID','看课日期','完课日期','版本号','打分日期','打分人','身份','对比角色','评分标准','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分',...DIMS.map(d=>d.n+'·原因'),'问题','优化建议','亮点（旧）','回放链接'];
   const issTxt=r=>(S.issuesBy[r.id]||[]).map(x=>`${x.priority}｜${x.root}｜${x.time||'—'}｜${x.description}`).concat(r.issues?[r.issues]:[]).join('\n');
-  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.date,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',r.rubric||RUBRIC,r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
+  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.id,r.date,r.completionDate,r.courseVersion,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',r.rubric||RUBRIC,r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='TQA打分记录_'+today()+'.csv'; document.body.appendChild(a); a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(all?'TQA_V2.1_全部打分明细_':'TQA_V2.1_筛选打分明细_')+today()+'.csv'; document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
 
@@ -502,6 +515,7 @@ function startTask(t){
   $('#f-date').value=t.date||today(); $('#f-type').value=t.type||'体验课'; $('#f-level').value=t.level||'Lv1';
   $('#f-lesson').value=t.lesson||''; $('#f-class').value=t.class_id||''; fillTeachers($('#f-teacher'),t.teacher||'');
   $('#f-country').value=t.country||''; $('#f-url').value=t.url||'';
+  $('#f-completion-date').value=t.completion_date||''; $('#f-version').value=t.course_version||''; syncCompletionDate();
   S.fromTask=t.id; const th=$('#taskHint'); th.hidden=false;
   th.innerHTML=`<b>复评任务 · Class ${esc(t.class_id)}</b>：课程信息已带入，请独立看课打分。保存后任务自动完成，可在「复评」里查看和常规打分者的对比。`;
   checkDup(); location.hash='score'; window.scrollTo(0,0);
@@ -527,7 +541,7 @@ function cmpHtml(t){
 function taskRow(t,isOpen){
   const late=isOpen&&t.task_date<today(); const u=safeUrl(t.url);
   return `<div class="task" data-tid="${esc(t.id)}"><div>
-    <div class="meta"><span class="mono"><b>Class ${esc(t.class_id)}</b></span><span>Lesson ${esc(t.lesson||'—')}</span><span>${esc(t.type||'')} · ${esc(t.level||'')}</span><span>老师 ${esc(t.teacher||'—')}</span>${t.country?`<span>${esc(t.country)}</span>`:''}<span>看课日期 ${esc(t.date||'—')}</span>${u?`<a href="${esc(u)}" target="_blank" rel="noopener">打开回放</a>`:''}</div>
+    <div class="meta"><span class="mono"><b>Class ${esc(t.class_id)}</b></span><span>Lesson ${esc(t.lesson||'—')}</span><span>${esc(t.type||'')} · ${esc(t.level||'')}</span><span>老师 ${esc(t.teacher||'—')}</span>${t.country?`<span>${esc(t.country)}</span>`:''}<span>看课日期 ${esc(t.date||'—')}</span>${t.completion_date?`<span>完课日期 ${esc(t.completion_date)}</span>`:''}${t.course_version?`<span>版本号 ${esc(t.course_version)}</span>`:''}${u?`<a href="${esc(u)}" target="_blank" rel="noopener">打开回放</a>`:''}</div>
     <div class="sub">分配于 ${esc(t.task_date)}（${wdOf(t.task_date)}）${late?' <span class="pill warn">已过分配日</span>':''}${t.done_at?' · 完成于 '+esc(localDay(t.done_at)):''}</div></div>
     <div class="row">${isOpen?'<button class="btn sm primary" type="button" data-act="start">开始打分</button>':`<button class="btn sm" type="button" data-act="cmp">${S.cmpOpen===t.id?'收起':'查看对比'}</button>`}</div>
     ${S.cmpOpen===t.id?cmpHtml(t):''}</div>`;
@@ -901,6 +915,7 @@ async function boot(){
   $('#form').addEventListener('submit',saveForm);
   $('#btnReset').onclick=()=>resetForm(false); $('#btnCancelEdit').onclick=()=>resetForm(false);
   $('#btnAddIssue').onclick=addIssueRow;
+  $('#f-done').addEventListener('change',syncCompletionDate);
   $('#issueRows').addEventListener('click',e=>{ const b=e.target.closest('[data-act="rm"]'); if(!b) return; readIssueRows(); S.issueRows.splice(+b.closest('.irow').dataset.k,1); renderIssueRows(); });
   $('#btnSyncRefresh').onclick=async()=>{ const b=$('#btnSyncRefresh'); b.disabled=true; await loadSync(); b.disabled=false; toast('已刷新'); };
   $('#q-level').onchange=()=>{ S.filter.level=$('#q-level').value; renderBoard(); };
@@ -912,6 +927,18 @@ async function boot(){
   $('#btnSaveCfg').onclick=saveCfg;
   $('#btnReviewRefresh').onclick=async()=>{ const b=$('#btnReviewRefresh'); b.disabled=true; await loadData(); b.disabled=false; renderReview(); toast('已刷新'); };
   $('#btnRefresh').onclick=async()=>{ const b=$('#btnRefresh'); b.disabled=true; await loadData(); b.disabled=false; renderBoard(); toast('已刷新'); };
+  $('#btnExportAll').onclick=async()=>{
+    if(!S.isAdmin) return;
+    const b=$('#btnExportAll'); b.disabled=true;
+    try{
+      const [rows,members,issues]=await Promise.all([API.scores(null),API.members(),API.issues(null)]);
+      S.all=rows.map(fromDb); S.mine=S.all.filter(r=>r.user_id===S.uid); S.members=members; indexIssues(issues);
+      if(!S.all.length){ toast('没有打分记录可导出'); return; }
+      const records=allRecords().sort((a,c)=>(c.createdAt||c.date||'').localeCompare(a.createdAt||a.date||''));
+      exportCsv(records,true); renderBoard();
+    }catch(err){ toast(errMsg(err)); }
+    finally{ b.disabled=false; }
+  };
   $('#gateForm').addEventListener('submit',submitGate);
   $('#g-cancel').onclick=()=>{ S.renaming=false; route(); };
   $('#authTabs').onclick=e=>{ const b=e.target.closest('button'); if(b) setAuthMode(b.dataset.m); };

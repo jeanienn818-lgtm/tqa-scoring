@@ -238,6 +238,8 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
           <div class="field"><label for="f-teacher">老师</label><select id="f-teacher"></select></div>
           <div class="field"><label for="f-country">国家</label><input type="text" id="f-country" placeholder="如 越南"></div>
           <div class="field"><label for="f-done">完课状态</label><select id="f-done"><option>完课</option><option>未完课</option></select></div>
+          <div class="field"><label for="f-completion-date">完课日期<span class="req" id="completionDateRequired">*</span></label><input type="date" id="f-completion-date" required></div>
+          <div class="field"><label for="f-version">版本号（选填）</label><input type="text" id="f-version" placeholder="课程或产品版本号"></div>
           <div class="field"><label for="f-cam">摄像头</label><select id="f-cam"><option>开</option><option>未开</option></select></div>
           <div class="field" style="grid-column:1/-1"><label for="f-url">回放链接</label><input type="url" id="f-url" placeholder="https://"></div>
         </div>
@@ -290,7 +292,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
 
   <!-- ============ 看板 ============ -->
   <section class="view" data-view="board" hidden>
-    <div class="vhead"><div><h1>看板</h1><p>打分进度、双人一致性、问题汇总和全部记录，按所选日期统计。</p></div><button class="btn" type="button" id="btnRefresh">刷新数据</button></div>
+    <div class="vhead"><div><h1>看板</h1><p>打分进度、双人一致性、问题汇总和全部记录，按所选日期统计。</p></div><div class="row"><button class="btn" type="button" id="btnRefresh">刷新数据</button><button class="btn primary" type="button" id="btnExportAll">导出全部打分明细 CSV</button></div></div>
     <div class="card">
       <div class="filters">
         <div class="field"><label>快捷范围</label><div class="seg" id="presets"><button type="button" data-p="week">本周</button><button type="button" data-p="d14">近 14 天</button><button type="button" data-p="d28">近 28 天</button><button type="button" data-p="all" aria-pressed="true">全部</button></div></div>

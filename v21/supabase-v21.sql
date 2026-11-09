@@ -9,6 +9,8 @@ create table if not exists public.scores_v21 (
   import_role text check (import_role in ('regular','expert')),
   source text not null default 'web',
   date date not null,
+  completion_date date,
+  course_version text,
   type text, level text, lesson text,
   class_id text not null,
   teacher text, country text, done text, camera text, url text,
@@ -20,6 +22,16 @@ create table if not exists public.scores_v21 (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.scores_v21 add column if not exists completion_date date;
+alter table public.scores_v21 add column if not exists course_version text;
+-- Existing records may lack a completion date. New completed web scores and
+-- edits to completed legacy web scores must provide one.
+do $$ begin
+  if not exists (select 1 from pg_constraint where conrelid = 'public.scores_v21'::regclass and conname = 'scores_v21_completion_date_required') then
+    alter table public.scores_v21 add constraint scores_v21_completion_date_required
+      check (source <> 'web' or coalesce(done,'') <> '完课' or completion_date is not null) not valid;
+  end if;
+end $$;
 create unique index if not exists scores_v21_one_per_user_class on public.scores_v21(user_id,class_id) where user_id is not null;
 create index if not exists scores_v21_date_idx on public.scores_v21(date);
 create index if not exists scores_v21_user_idx on public.scores_v21(user_id);
@@ -206,7 +218,8 @@ create table if not exists public.review_tasks_v21 (
   score_id    uuid references public.scores_v21(id) on delete set null,  -- 被抽中的常规打分记录
   scorer_id   uuid references auth.users(id) on delete set null,     -- 常规打分者
   class_id    text not null,
-  date date, type text, level text, lesson text, teacher text, country text, url text,  -- 课程信息副本（不含分数）
+  date date, completion_date date, course_version text,
+  type text, level text, lesson text, teacher text, country text, url text,  -- 课程信息副本（不含分数）
   reason      text,
   status      text not null default 'open' check (status in ('open','done','cancelled')),
   assigned_to uuid references auth.users(id) on delete set null,     -- 专家（只有一位专家时自动填）
@@ -215,6 +228,8 @@ create table if not exists public.review_tasks_v21 (
   done_at     timestamptz,
   cancelled_at timestamptz
 );
+alter table public.review_tasks_v21 add column if not exists completion_date date;
+alter table public.review_tasks_v21 add column if not exists course_version text;
 create unique index if not exists review_tasks_one_active_v21 on public.review_tasks_v21(class_id) where status <> 'cancelled';
 create index if not exists review_tasks_week_idx_v21 on public.review_tasks_v21(week_start);
 create index if not exists review_tasks_day_idx_v21 on public.review_tasks_v21(task_date);
@@ -226,6 +241,38 @@ grant select on public.review_tasks_v21 to authenticated;
 drop policy if exists rt_select_v21 on public.review_tasks_v21;
 create policy rt_select_v21 on public.review_tasks_v21 for select to authenticated using (public.is_admin());
 -- 写入只通过下面的函数完成；专家通过 my_review_tasks_v21() 读取（看不到是谁打的、打了多少分）
+
+-- Copy course fields into review tasks without exposing the scorer's score.
+create or replace function public.review_task_course_fields_v21() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_date date; v_version text;
+begin
+  if new.score_id is not null then
+    select s.completion_date, s.course_version into v_date, v_version from scores_v21 s where s.id = new.score_id;
+    new.completion_date := v_date; new.course_version := v_version;
+  end if;
+  return new;
+end $$;
+drop trigger if exists review_task_course_fields_v21 on public.review_tasks_v21;
+create trigger review_task_course_fields_v21 before insert or update of score_id on public.review_tasks_v21
+  for each row execute function public.review_task_course_fields_v21();
+
+create or replace function public.score_course_fields_to_review_v21() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update review_tasks_v21 set completion_date = new.completion_date, course_version = new.course_version
+    where score_id = new.id and status = 'open';
+  return null;
+end $$;
+drop trigger if exists score_course_fields_to_review_v21 on public.scores_v21;
+create trigger score_course_fields_to_review_v21 after update of completion_date, course_version on public.scores_v21
+  for each row when (old.completion_date is distinct from new.completion_date or old.course_version is distinct from new.course_version)
+  execute function public.score_course_fields_to_review_v21();
+update public.review_tasks_v21 t
+  set completion_date = s.completion_date, course_version = s.course_version
+  from public.scores_v21 s
+  where t.score_id = s.id
+    and (t.completion_date is distinct from s.completion_date or t.course_version is distinct from s.course_version);
 
 -- ============ 辅助 ============
 create or replace function public.is_expert_v21() returns boolean
@@ -399,7 +446,7 @@ end $$;
 -- 专家看到的任务（不含打分者和分数）
 create or replace function public.my_review_tasks_v21() returns jsonb
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(jsonb_build_object('id',id,'task_date',task_date,'date',date,'type',type,'level',level,'lesson',lesson,
+  select coalesce(jsonb_agg(jsonb_build_object('id',id,'task_date',task_date,'date',date,'completion_date',completion_date,'course_version',course_version,'type',type,'level',level,'lesson',lesson,
     'class_id',class_id,'teacher',teacher,'country',country,'url',url,'status',status,'done_at',done_at) order by task_date, created_at), '[]'::jsonb)
   from review_tasks_v21
   where (public.is_expert_v21() or public.is_admin()) and status <> 'cancelled'
@@ -429,6 +476,8 @@ revoke all on function public.is_expert_v21() from public, anon;
 revoke all on function public.review_cfg_v21() from public, anon;
 revoke all on function public.review_sync_v21(text) from public, anon, authenticated;
 revoke all on function public.scores_review_trg_v21() from public, anon, authenticated;
+revoke all on function public.review_task_course_fields_v21() from public, anon, authenticated;
+revoke all on function public.score_course_fields_to_review_v21() from public, anon, authenticated;
 revoke all on function public.generate_review_tasks_v21(date, boolean) from public, anon;
 revoke all on function public.cancel_review_task_v21(uuid) from public, anon;
 revoke all on function public.add_review_task_v21(text) from public, anon;

@@ -27,6 +27,8 @@
     ['课程信息', 'Class Details'], ['看课日期', 'Observation Date'], ['课程类型', 'Class Type'], ['级别', 'Level'],
     ['体验课', 'Trial Class'], ['正式课', 'Regular Class'], ['如 761', 'e.g. 761'], ['用于和其他打分人配对', 'Used to match another scorer’s record'],
     ['老师', 'Teacher'], ['国家', 'Country'], ['如 越南', 'e.g. Vietnam'], ['完课状态', 'Completion Status'],
+    ['完课日期', 'Completion Date'], ['版本号', 'Course / Product Version'], ['版本号（选填）', 'Course / Product Version (optional)'],
+    ['课程或产品版本号', 'Course or product version'],
     ['完课', 'Completed'], ['未完课', 'Incomplete'], ['摄像头', 'Camera'], ['开', 'On'], ['未开', 'Off'], ['回放链接', 'Recording URL'],
     ['8 维打分', 'Eight Dimensions'], ['每维先看快速指南，需要时展开完整标准；', 'Use the Quick Guide first; open the full standard when needed. '],
     ['打开完整 V2.1 Rubric', 'Open Full V2.1 Rubric'], ['需要跟进的问题', 'Issues Needing Follow-up'],
@@ -84,7 +86,9 @@
     ['用逗号分隔', 'Separate with commas'], ['同事的邮箱', 'Colleague’s email'], ['可以', 'Allowed'],
     ['自动生成', 'Automatic Generation'], ['复评日', 'Review Days'], ['周一', 'Monday'], ['周二', 'Tuesday'], ['周三', 'Wednesday'],
     ['周四', 'Thursday'], ['周五', 'Friday'], ['周六', 'Saturday'], ['周日', 'Sunday'],
-    ['导出 CSV', 'Export CSV'], ['已复制', 'Copied'], ['复制失败，请改用导出 CSV', 'Copy failed. Use CSV export instead.'],
+    ['导出 CSV', 'Export CSV'], ['导出全部打分明细 CSV', 'Export All Score Details CSV'],
+    ['导出当前筛选明细 CSV', 'Export Filtered Score Details CSV'], ['没有打分记录可导出', 'No scoring records to export'],
+    ['已复制', 'Copied'], ['复制失败，请改用导出 CSV', 'Copy failed. Use CSV export instead.'],
   ];
   entries.push(
     ['每个复评日北京时间 07:00 从前一天及之前的常规打分中自动抽课；专家对同一 Class ID 打分后自动完成，用于一致性对比。', 'At 07:00 Beijing time on each review day, classes scored before that day are selected automatically. An expert completes a task by scoring the same Class ID; the pair is used to measure agreement.'],
