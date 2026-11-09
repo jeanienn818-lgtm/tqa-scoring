@@ -1,12 +1,13 @@
 (function(){
 "use strict";
-const DIMS = window.TQA_V21?.dimensions;
+const LANG = window.TQA_I18N?.lang || 'zh';
+const DIMS = window.TQA_V21?.[LANG]?.dimensions;
 const RUBRIC = 'V2.1';
-const V21 = window.TQA_V21;
+const V21 = window.TQA_V21?.[LANG];
 if(!V21 || !DIMS || DIMS.length !== 8 || V21.guide.length !== 48) throw new Error('V2.1 评分标准未加载');
 const QUICK = V21.guide;
 const GUIDE_KEYS = V21.guideKeys;
-const SHORT = ['热情','语速','互动','输出','纠错','关系','TPR','策略'];
+const SHORT = LANG==='en' ? ['Presence','Language','Interaction','Output','Correction','Rapport','TPR','Strategy'] : ['热情','语速','互动','输出','纠错','关系','TPR','策略'];
 const ROOTS = ['课程','级别','识别','教学','产品','待查'];
 const PRIS = ['P0','P1','P2','P3'];
 const LEVELS = ['Lv1','Lv2','Lv3','Lv4','Lv5','Lv6','Lv7','Lv8'];
@@ -15,7 +16,7 @@ const DEFAULT_CFG = {roles:{}, teachers:['Kim','Leo','Max'],
   targets:{diff:[2,1], pass:[0.85,0.90], icc:[0.75,0.80], dim:[0.95,0.95]},
   export:{module:'课中 In-Class', channel:'TQA打分', local:'非本地化 / 通用'},
   review:{enabled:true, days:[2,3,4,5], daily_min:2, daily_max:5, weekly_min:10, weekly_max:20, per_scorer_min:2, levels:['Lv1','Lv2','Lv3','Lv4'], pool_days:14}};
-const WD=['','周一','周二','周三','周四','周五','周六','周日'];
+const WD=LANG==='en'?['','Mon','Tue','Wed','Thu','Fri','Sat','Sun']:['','周一','周二','周三','周四','周五','周六','周日'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const f1 = v => (v==null||isNaN(v))?'—':(Math.round(v*10)/10).toFixed(1);
@@ -894,6 +895,8 @@ function clearState(){ Object.assign(S,{canSync:false,issuesBy:{},syncItems:null
   document.querySelector('.tabs a[data-v="review"]').hidden=true; document.querySelector('.tabs a[data-v="sync"]').hidden=true; }
 async function logout(){ try{ await API.signOut(); }catch(_){} clearState(); resetForm(false); paintWho(); location.hash='score'; route(); }
 async function boot(){
+  window.TQA_I18N?.start(V21.rules);
+  $('#dims a').href='rubric.html?lang='+LANG;
   buildDims(); fillTeachers($('#f-teacher'),'Kim'); resetForm(false); setAuthMode('login');
   $('#form').addEventListener('submit',saveForm);
   $('#btnReset').onclick=()=>resetForm(false); $('#btnCancelEdit').onclick=()=>resetForm(false);

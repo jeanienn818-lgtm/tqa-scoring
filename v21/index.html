@@ -37,6 +37,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tabs a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:13.5px;padding:7px 12px;border-radius:7px}
 .tabs a:hover{background:var(--sunk);color:var(--fg)}.tabs a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.language{display:flex;gap:2px;border:1px solid var(--line);border-radius:8px;padding:2px;white-space:nowrap}
+.language button{border:0;border-radius:6px;background:transparent;color:var(--muted);padding:4px 9px;cursor:pointer;font-size:12px}
+.language button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);font-weight:700}
 .who img{width:22px;height:22px;border-radius:50%}
 .wrap{max-width:1120px;margin:0 auto;padding-block:22px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
 .notice{border-radius:8px;padding:10px 14px;font-size:13.5px;background:var(--warn-soft);color:var(--fg);border:1px solid color-mix(in oklab,var(--warn) 35%,transparent)}
@@ -165,6 +168,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
     <a href="#board" data-v="board" hidden>看板</a>
     <a href="#setup" data-v="setup" hidden>设置</a>
   </nav>
+  <div class="language" role="group" aria-label="Language"><button type="button" data-lang="zh" aria-pressed="true">中文</button><button type="button" data-lang="en" aria-pressed="false">English</button></div>
   <div class="who" id="who"></div>
 </div></header>
 
@@ -310,6 +314,7 @@ td.zero{color:var(--faint)}.mx td.num{min-width:34px}
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
+<script src="i18n.js"></script>
 <script src="rubric-v21.js"></script>
 <script src="app.js"></script>
 </body></html>
