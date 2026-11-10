@@ -18,7 +18,7 @@ create table if not exists public.scores_v21 (
   total numeric(5,1),
   hl text, issues text, sugg text,
   reasons text[],
-  rubric text not null default 'V2.1' check (rubric = 'V2.1'),
+  rubric text not null default 'V2.1' check (rubric in ('V2.1','V1.9','Unspecified')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -29,10 +29,10 @@ alter table public.scores_v21 add column if not exists course_version text;
 do $$ begin
   if not exists (select 1 from pg_constraint where conrelid = 'public.scores_v21'::regclass and conname = 'scores_v21_completion_date_required') then
     alter table public.scores_v21 add constraint scores_v21_completion_date_required
-      check (source <> 'web' or coalesce(done,'') <> '完课' or completion_date is not null) not valid;
+      check (source <> 'web' or coalesce(done,'') <> '完课' or rubric <> 'V2.1' or completion_date is not null) not valid;
   end if;
 end $$;
-create unique index if not exists scores_v21_one_per_user_class on public.scores_v21(user_id,class_id) where user_id is not null;
+create unique index if not exists scores_v21_one_per_user_class on public.scores_v21(user_id,class_id,rubric) where user_id is not null;
 create index if not exists scores_v21_date_idx on public.scores_v21(date);
 create index if not exists scores_v21_user_idx on public.scores_v21(user_id);
 drop trigger if exists scores_v21_touch on public.scores_v21;
@@ -61,10 +61,10 @@ create policy s21_select on public.scores_v21 for select to authenticated
 create policy s21_insert on public.scores_v21 for insert to authenticated
   with check (user_id = (select auth.uid()) and public.is_member() and import_role is null and source = 'web' and rubric = 'V2.1');
 create policy s21_update on public.scores_v21 for update to authenticated
-  using (user_id = (select auth.uid()) and public.is_member())
+  using (user_id = (select auth.uid()) and public.is_member() and rubric = 'V2.1')
   with check (user_id = (select auth.uid()) and import_role is null and source in ('web','历史导入','首批导入') and rubric = 'V2.1');
 create policy s21_delete on public.scores_v21 for delete to authenticated
-  using (user_id = (select auth.uid()) or public.is_admin());
+  using ((user_id = (select auth.uid()) or public.is_admin()) and rubric = 'V2.1');
 drop policy if exists c21_select on public.app_config_v21;
 drop policy if exists c21_update on public.app_config_v21;
 create policy c21_select on public.app_config_v21 for select to authenticated using (public.is_member());
@@ -297,7 +297,7 @@ declare t timestamptz;
 begin
   if p_class is null then return; end if;
   select min(s.created_at) into t from scores_v21 s join members m on m.user_id = s.user_id
-   where s.class_id = p_class and m.compare_role = 'expert';
+   where s.class_id = p_class and m.compare_role = 'expert' and s.rubric = 'V2.1';
   if t is not null then
     update review_tasks_v21 set status = 'done', done_at = t where class_id = p_class and status = 'open';
   else
@@ -356,12 +356,12 @@ begin
       (s.total < 60 or exists(select 1 from unnest(s.s) v where v < 6))::int as low,
       (s.created_at at time zone 'Asia/Shanghai')::date as scored
     from scores_v21 s join members m on m.user_id = s.user_id and m.active and m.compare_role = 'regular'
-    where s.import_role is null and s.s is not null and s.total is not null
+    where s.import_role is null and s.rubric = 'V2.1' and s.s is not null and s.total is not null
       and (s.created_at at time zone 'Asia/Shanghai')::date < d
       and (s.created_at at time zone 'Asia/Shanghai')::date >= d - pool
       and not exists(select 1 from review_tasks_v21 t where t.class_id = s.class_id and (t.status <> 'cancelled' or t.week_start = ws))
-      and not exists(select 1 from scores_v21 x join members mx on mx.user_id = x.user_id where x.class_id = s.class_id and mx.compare_role = 'expert')
-      and not exists(select 1 from scores_v21 y where y.class_id = s.class_id and y.import_role is not null)
+      and not exists(select 1 from scores_v21 x join members mx on mx.user_id = x.user_id where x.class_id = s.class_id and mx.compare_role = 'expert' and x.rubric = 'V2.1')
+      and not exists(select 1 from scores_v21 y where y.class_id = s.class_id and y.import_role is not null and y.rubric = 'V2.1')
     order by s.class_id, s.created_at;
 
   -- 每位常规打分者本周还差几节（只算有候选课的人）
@@ -435,7 +435,7 @@ begin
   if not public.is_admin() then raise exception '只有管理员可以指定任务'; end if;
   if exists(select 1 from review_tasks_v21 where class_id = trim(p_class) and status <> 'cancelled') then raise exception '这节课已经在复评任务里'; end if;
   select sc.* into s from scores_v21 sc join members m on m.user_id = sc.user_id and m.compare_role = 'regular'
-   where sc.class_id = trim(p_class) order by sc.created_at desc limit 1;
+   where sc.class_id = trim(p_class) and sc.rubric = 'V2.1' order by sc.created_at desc limit 1;
   if not found then raise exception '没有找到常规打分者对这节课的打分记录'; end if;
   select case when count(*) = 1 then min(user_id::text)::uuid end into exp from members where active and compare_role = 'expert' and user_id is not null;
   insert into review_tasks_v21(task_date, week_start, score_id, scorer_id, class_id, date, type, level, lesson, teacher, country, url, reason, assigned_to, created_by)
@@ -467,7 +467,7 @@ begin
   select jsonb_agg(jsonb_build_object('who', coalesce(nullif(m.name,''), split_part(m.email,'@',1)), 's', s.s, 'total', s.total,
            'hl', s.hl, 'issues', s.issues, 'sugg', s.sugg, 'reasons', s.reasons,
            'issue_list', (select coalesce(jsonb_agg(jsonb_build_object('time', i.time, 'description', i.description, 'root', i.root, 'priority', i.priority) order by i.pos, i.created_at), '[]'::jsonb) from issues_v21 i where i.score_id = s.id)) order by s.created_at) into r
-    from scores_v21 s join members m on m.user_id = s.user_id and m.compare_role = 'regular' where s.class_id = t.class_id;
+    from scores_v21 s join members m on m.user_id = s.user_id and m.compare_role = 'regular' where s.class_id = t.class_id and s.rubric = 'V2.1';
   return coalesce(r, '[]'::jsonb);
 end $$;
 

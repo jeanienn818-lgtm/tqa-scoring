@@ -23,6 +23,7 @@ const f1 = v => (v==null||isNaN(v))?'—':(Math.round(v*10)/10).toFixed(1);
 const f2 = v => (v==null||isNaN(v))?'—':(Math.round(v*100)/100).toFixed(2);
 const pct = v => (v==null||isNaN(v))?'—':Math.round(v*100)+'%';
 const sgn = v => (v==null||isNaN(v))?'—':((v>0?'+':v<0?'−':'')+Math.abs(Math.round(v*100)/100).toFixed(2));
+const rubricLabel = v => v==='Unspecified'?(LANG==='en'?'Unspecified':'未标注'):(v||'—');
 const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const localDay = iso => { const d=new Date(iso); if(isNaN(d)) return ''; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const addDays = (s,n) => { const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
@@ -31,7 +32,7 @@ let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList
 
 const S = { uid:null, email:'', member:null, isAdmin:false, isOwner:false, myName:'',
   cfg:JSON.parse(JSON.stringify(DEFAULT_CFG)), mine:[], all:[], members:[], loaded:false,
-  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:'',level:''}, openRow:null, includeUnfmt:false, authMode:'login',
+  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:'',level:'',rubric:RUBRIC}, openRow:null, includeUnfmt:false, authMode:'login',
   isExpert:false, tasks:[], myTasks:[], fromTask:null, cmpOpen:null, cmpData:{}, rvWeek:null,
   canSync:false, reasons:Array(8).fill(''), issueRows:[], issuesBy:{}, syncItems:null, syncState:{}, syncCopied:false, openPair:null };
 
@@ -184,6 +185,7 @@ function resetForm(keepCourse){
   paintScores();
 }
 function loadIntoForm(r){
+  if(r.rubric!==RUBRIC){ toast('历史评分仅供查看'); return; }
   S.editing=r.id; $('#f-date').value=r.date||''; $('#f-type').value=r.type||'体验课'; $('#f-level').value=r.level||'Lv1';
   $('#f-lesson').value=r.lesson||''; $('#f-class').value=r.classId||''; fillTeachers($('#f-teacher'),r.teacher||'');
   $('#f-country').value=r.country||''; $('#f-done').value=r.done||'完课'; $('#f-completion-date').value=r.completionDate||'';
@@ -198,7 +200,7 @@ function loadIntoForm(r){
 }
 function checkDup(){
   const c=$('#f-class').value.trim(); const h=$('#dupHint');
-  const hit=c&&S.mine.find(r=>r.classId===c&&r.id!==S.editing);
+  const hit=c&&S.mine.find(r=>r.classId===c&&r.rubric===RUBRIC&&r.id!==S.editing);
   if(!hit){ h.hidden=true; return null; }
   h.hidden=false; h.innerHTML=`你已经给 Class ${esc(c)} 打过分（${esc(hit.date)}，总分 ${f1(hit.total)}）。<button class="btn sm" type="button" id="dupEdit">编辑那条记录</button>`;
   $('#dupEdit').onclick=()=>loadIntoForm(hit); return hit;
@@ -276,16 +278,17 @@ async function saveIssues(scoreId, list){
 function renderMine(){
   const box=$('#mineBody');
 
-  const td=today(); const tdN=S.mine.filter(r=>localDay(r.createdAt)===td).length;
-  const wk=addDays(td,-((new Date(td+'T00:00:00').getDay()+6)%7)); const wkN=S.mine.filter(r=>localDay(r.createdAt)>=wk).length;
-  $('#mineStats').innerHTML=`<div class="kpi"><span class="v">${tdN}</span><span class="l">今天已打</span></div><div class="kpi"><span class="v">${wkN}</span><span class="l">本周已打</span></div><div class="kpi"><span class="v">${S.mine.length}</span><span class="l">累计</span></div>`;
+  const current=S.mine.filter(r=>r.rubric===RUBRIC);
+  const td=today(); const tdN=current.filter(r=>localDay(r.createdAt)===td).length;
+  const wk=addDays(td,-((new Date(td+'T00:00:00').getDay()+6)%7)); const wkN=current.filter(r=>localDay(r.createdAt)>=wk).length;
+  $('#mineStats').innerHTML=`<div class="kpi"><span class="v">${tdN}</span><span class="l">今天已打</span></div><div class="kpi"><span class="v">${wkN}</span><span class="l">本周已打</span></div><div class="kpi"><span class="v">${current.length}</span><span class="l">累计（V2.1）</span></div>`;
   const rows=S.mine.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.updatedAt||'').localeCompare(a.updatedAt||''));
   if(!rows.length){ box.innerHTML='<div class="empty">还没有记录。到"打分"页填写第一节课，保存后会出现在这里。</div>'; return; }
-  box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
-    rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
+  box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
+    rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
       (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td><td class="num">${issueCount(r)}</td>
-      <td class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="edit" type="button">编辑</button><button class="btn sm danger" data-act="del" type="button">删除</button></td></tr>
-      ${S.openRow===r.id?`<tr class="detail"><td colspan="19">${detailText(r)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
+      <td class="row" style="flex-wrap:nowrap">${r.rubric===RUBRIC?'<button class="btn sm" data-act="edit" type="button">编辑</button><button class="btn sm danger" data-act="del" type="button">删除</button>':'<span class="hint">历史评分仅供查看</span>'}</td></tr>
+      ${S.openRow===r.id?`<tr class="detail"><td colspan="20">${detailText(r)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
   box.onclick=async e=>{
     const tr=e.target.closest('tr[data-id]'); if(!tr) return; const r=S.mine.find(x=>x.id===tr.dataset.id); if(!r) return;
     const act=e.target.closest('button')&&e.target.closest('button').dataset.act;
@@ -375,17 +378,17 @@ function scatter(P){
 function renderBoard(){
   const box=$('#boardBody'); if(!box) return;
   if(!API) return;
-  const all=allRecords(); const ranged=all.filter(inRange);
+  const all=allRecords().filter(r=>r.rubric===S.filter.rubric); const ranged=all.filter(inRange);
   // reviewer filter options
   const revIds=[...new Set(all.map(r=>r.rev))]; const sel=$('#q-rev'); const cur=S.filter.rev;
   sel.innerHTML='<option value="">全部</option>'+revIds.map(id=>`<option value="${esc(id)}">${esc(revName(id))}</option>`).join(''); sel.value=cur;
   const shown=S.filter.rev?ranged.filter(r=>r.rev===S.filter.rev):ranged;
-  if(!all.length){ box.innerHTML='<div class="empty">还没有任何打分记录。在「设置」里添加成员，他们保存后会出现在这里。</div>'; return; }
+  if(!all.length){ box.innerHTML=allRecords().length?'<div class="empty">该评分版本暂无记录。</div>':'<div class="empty">还没有任何打分记录。在「设置」里添加成员，他们保存后会出现在这里。</div>'; return; }
   const P=pairs(ranged), st=stats(P), T=S.cfg.targets||DEFAULT_CFG.targets;
   const ok={diff:st.n?Math.abs(st.diff)<=T.diff[0]:null, pass:st.n?Math.round(st.pass*100)>=Math.round(T.pass[0]*100):null,
     icc:st.icc==null?null:Math.round(st.icc*100)>=Math.round(T.icc[0]*100), dim:st.dim==null?null:Math.round(st.dim*100)>=Math.round(T.dim[0]*100)};
   const classes=new Set(shown.map(r=>r.classId)).size;
-  let h=`<div class="kpis">
+  let h=(S.filter.rubric==='Unspecified'?'<div class="notice">原记录未标注评分标准；这组统计仅供历史参考。</div>':'')+`<div class="kpis">
     <div class="kpi"><span class="v">${shown.length}</span><span class="l">打分记录</span></div>
     <div class="kpi"><span class="v">${classes}</span><span class="l">课程（Class ID）</span></div>
     <div class="kpi"><span class="v">${new Set(shown.map(r=>r.rev)).size}</span><span class="l">打分人</span></div>
@@ -446,9 +449,9 @@ function renderBoard(){
   // all records
   const recs=shown.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看打分原因和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="csv">导出当前筛选明细 CSV</button></div>
-    <div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
-    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
-      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="18">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
+    <div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
+    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
+      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="19">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
     ${recs.length>400?`<p class="hint">只显示最近 400 条；导出 CSV 包含全部 ${recs.length} 条。</p>`:''}</div>`;
   box.innerHTML=h;
   const ax=$('#progAxis'); if(ax) ax.onclick=e=>{ const b=e.target.closest('button'); if(b){ S.progAxis=b.dataset.a; renderBoard(); } };
@@ -492,7 +495,7 @@ function exportCsv(recs, all=false){
     ? ['Record ID','Observation Date','Completion Date','Course / Product Version','Scoring Date','Scorer','Role','Comparison Role','Rubric Version','Class Type','Level','Lesson ID','Class ID','Teacher','Country','Completion Status','Camera',...DIMS.map(d=>d.n),'Weighted Total',...DIMS.map(d=>d.n+' · Reason'),'Issues','Improvement Suggestions','Highlights (legacy)','Recording URL']
     : ['记录 ID','看课日期','完课日期','版本号','打分日期','打分人','身份','对比角色','评分标准','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分',...DIMS.map(d=>d.n+'·原因'),'问题','优化建议','亮点（旧）','回放链接'];
   const issTxt=r=>(S.issuesBy[r.id]||[]).map(x=>`${x.priority}｜${x.root}｜${x.time||'—'}｜${x.description}`).concat(r.issues?[r.issues]:[]).join('\n');
-  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.id,r.date,r.completionDate,r.courseVersion,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',r.rubric||RUBRIC,r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
+  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.id,r.date,r.completionDate,r.courseVersion,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',rubricLabel(r.rubric),r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(all?'TQA_V2.1_全部打分明细_':'TQA_V2.1_筛选打分明细_')+today()+'.csv'; document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -524,7 +527,7 @@ function cmpHtml(t){
   const d=S.cmpData[t.id]; if(!d) return '<div class="cmp">正在加载…</div>';
   if(d.error) return `<div class="cmp">${esc(d.error)}</div>`;
   if(!d.length) return '<div class="cmp">没有找到常规打分者对这节课的记录（可能已被删除）。</div>';
-  const pool=S.isExpert?S.mine:allRecords().filter(r=>r.role==='expert');
+  const pool=(S.isExpert?S.mine:allRecords().filter(r=>r.role==='expert')).filter(r=>r.rubric===RUBRIC);
   const me=pool.find(r=>r.classId===t.class_id);
   const cols=[{n:S.isExpert?'专家（我）':'专家',s:me?me.s:[],total:me?me.total:null}]
     .concat(d.map(x=>({n:x.who,s:(x.s||[]).map(Number),total:x.total==null?null:Number(x.total)})));
@@ -562,7 +565,7 @@ function adminPart(){
   const regs=S.members.filter(m=>m.active&&m.compare_role==='regular'&&m.user_id);
   const ids=[...new Set(regs.map(m=>m.user_id).concat(W.map(t=>t.scorer_id).filter(Boolean)))];
   const experts=S.members.filter(m=>m.active&&m.compare_role==='expert');
-  const per=C.per_scorer_min, scored=uid=>S.all.filter(r=>r.user_id===uid&&localDay(r.createdAt)>=ws&&localDay(r.createdAt)<=we).length;
+  const per=C.per_scorer_min, scored=uid=>S.all.filter(r=>r.rubric===RUBRIC&&r.user_id===uid&&localDay(r.createdAt)>=ws&&localDay(r.createdAt)<=we).length;
   const covS=ids.filter(id=>W.filter(t=>t.scorer_id===id).length>=per).length;
   const lvN=l=>W.filter(t=>t.level===l).length; const covL=C.levels.filter(l=>lvN(l)>0).length;
   const isDay=C.days.indexOf(((new Date(td+'T00:00:00').getDay()+6)%7)+1)>=0;
@@ -919,6 +922,7 @@ async function boot(){
   $('#issueRows').addEventListener('click',e=>{ const b=e.target.closest('[data-act="rm"]'); if(!b) return; readIssueRows(); S.issueRows.splice(+b.closest('.irow').dataset.k,1); renderIssueRows(); });
   $('#btnSyncRefresh').onclick=async()=>{ const b=$('#btnSyncRefresh'); b.disabled=true; await loadSync(); b.disabled=false; toast('已刷新'); };
   $('#q-level').onchange=()=>{ S.filter.level=$('#q-level').value; renderBoard(); };
+  $('#q-rubric').onchange=()=>{ S.filter.rubric=$('#q-rubric').value; S.filter.rev=''; renderBoard(); };
   $('#f-class').addEventListener('input',checkDup);
   $('#presets').onclick=e=>{ const b=e.target.closest('button'); if(b) setPreset(b.dataset.p); };
   ['q-from','q-to'].forEach(id=>$('#'+id).addEventListener('change',()=>{ S.filter.from=$('#q-from').value; S.filter.to=$('#q-to').value; document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed','false')); renderBoard(); }));
