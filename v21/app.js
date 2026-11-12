@@ -28,13 +28,15 @@ const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.ge
 const localDay = iso => { const d=new Date(iso); if(isNaN(d)) return ''; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const addDays = (s,n) => { const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const weighted = s => (s.every(v=>typeof v==='number')) ? Math.round(s.reduce((a,v,i)=>a+v*DIMS[i].w,0)*100)/10 : null;
+// Fixed for one form: sorting independent exponential keys samples tied scores by weight without replacement.
+const reasonTieKeys = () => DIMS.map(d=>-Math.log(1-Math.random())/d.w);
 let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2600); }
 
 const S = { uid:null, email:'', member:null, isAdmin:false, isOwner:false, myName:'',
   cfg:JSON.parse(JSON.stringify(DEFAULT_CFG)), mine:[], all:[], members:[], loaded:false,
   scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:'',level:'',rubric:RUBRIC}, openRow:null, includeUnfmt:false, authMode:'login',
   isExpert:false, tasks:[], myTasks:[], fromTask:null, cmpOpen:null, cmpData:{}, rvWeek:null,
-  canSync:false, reasons:Array(8).fill(''), issueRows:[], issuesBy:{}, syncItems:null, syncState:{}, syncCopied:false, openPair:null };
+  canSync:false, reasons:Array(8).fill(''), reasonKeys:reasonTieKeys(), issueRows:[], issuesBy:{}, syncItems:null, syncState:{}, syncCopied:false, openPair:null };
 
 /* ---------------- data layer (Supabase) ---------------- */
 const CONF = window.TQA_CONFIG || {};
@@ -153,14 +155,15 @@ function paintScores(){
     w.querySelector('label').hidden=!showInp; w.querySelector('input').hidden=!showInp; w.querySelector('[data-open]').hidden=showInp;
     const inp=w.querySelector('input'); if(inp.value!==(S.reasons[i]||'')) inp.value=S.reasons[i]||''; });
 }
-// 每节课固定写 3 条原因：分数最低的 2 个维度 + 分数最高的 1 个维度（同分时优先算已经写了原因的那个）
+// 八维打完后固定写 3 条原因；同分时保留已写原因，其余按维度权重抽选。
 function requiredWhy(){
   const has=i=>!!(S.reasons[i]||'').trim();
   const idx=S.scores.map((v,i)=>v==null?null:i).filter(i=>i!=null);
-  const out={}; if(idx.length<3) return out;
-  const low=idx.slice().sort((a,b)=>S.scores[a]-S.scores[b]||(has(b)-has(a))||a-b).slice(0,2);
+  const out={}; if(idx.length<8) return out;
+  const tied=(a,b)=>(has(b)-has(a))||S.reasonKeys[a]-S.reasonKeys[b];
+  const low=idx.slice().sort((a,b)=>S.scores[a]-S.scores[b]||tied(a,b)).slice(0,2);
   low.forEach(i=>out[i]='最低分');
-  const hi=idx.filter(i=>low.indexOf(i)<0).sort((a,b)=>S.scores[b]-S.scores[a]||(has(b)-has(a))||a-b)[0];
+  const hi=idx.filter(i=>low.indexOf(i)<0).sort((a,b)=>S.scores[b]-S.scores[a]||tied(a,b))[0];
   if(hi!=null) out[hi]='最高分';
   return out;
 }
@@ -175,7 +178,7 @@ function syncCompletionDate(){
   if(!completed) input.value='';
 }
 function resetForm(keepCourse){
-  S.editing=null; S.scores=Array(8).fill(null); if(!keepCourse){ S.fromTask=null; $('#taskHint').hidden=true; }
+  S.editing=null; S.scores=Array(8).fill(null); S.reasonKeys=reasonTieKeys(); if(!keepCourse){ S.fromTask=null; $('#taskHint').hidden=true; }
   if(!keepCourse){ ['f-lesson','f-class','f-country','f-url','f-completion-date','f-version'].forEach(id=>$('#'+id).value=''); $('#f-date').value=today(); }
   syncCompletionDate();
   ['f-issues','f-sugg'].forEach(id=>$('#'+id).value=''); $('#legacyBox').hidden=true;
@@ -186,6 +189,7 @@ function resetForm(keepCourse){
 }
 function loadIntoForm(r){
   if(r.rubric!==RUBRIC){ toast('历史评分仅供查看'); return; }
+  S.reasonKeys=reasonTieKeys();
   S.editing=r.id; $('#f-date').value=r.date||''; $('#f-type').value=r.type||'体验课'; $('#f-level').value=r.level||'Lv1';
   $('#f-lesson').value=r.lesson||''; $('#f-class').value=r.classId||''; fillTeachers($('#f-teacher'),r.teacher||'');
   $('#f-country').value=r.country||''; $('#f-done').value=r.done||'完课'; $('#f-completion-date').value=r.completionDate||'';
