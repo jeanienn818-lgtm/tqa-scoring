@@ -23,7 +23,7 @@
     ['新建打分', 'New Score'], ['按 V2.1 评分标准，每节课一条记录；8 个维度都填完才能保存。', 'Use the V2.1 rubric. Save one record per class after scoring all eight dimensions.'],
     ['清空表单', 'Clear Form'], ['通用评分规则', 'General Scoring Rules'],
     ['先看规则，再用快速指南定档；有疑问时展开完整标准', 'Read the rules, use the Quick Guide to choose a band, and open the full rubric when needed'],
-    ['平台填写要求：每节课写 3 条打分原因（最低分的 2 个维度、最高分的 1 个维度）；需要跟进的问题另记。', 'Platform entry requirement: explain three dimension scores per class (the two lowest and one highest). Record issues that need follow-up separately.'],
+    ['平台填写要求：八维打完后，为最低分的 2 个维度、最高分的 1 个维度写原因；同分按权重概率抽选，已写原因优先保留。需要跟进的问题另记。', 'After scoring all eight dimensions, explain the two lowest and one highest. Ties are drawn with higher-weight dimensions more likely; existing reasons take priority. Record follow-up issues separately.'],
     ['课程信息', 'Class Details'], ['看课日期', 'Observation Date'], ['课程类型', 'Class Type'], ['级别', 'Level'],
     ['体验课', 'Trial Class'], ['正式课', 'Regular Class'], ['如 761', 'e.g. 761'], ['用于和其他打分人配对', 'Used to match another scorer’s record'],
     ['老师', 'Teacher'], ['国家', 'Country'], ['如 越南', 'e.g. Vietnam'], ['完课状态', 'Completion Status'],
