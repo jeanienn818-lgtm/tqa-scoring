@@ -36,6 +36,7 @@ const S = { uid:null, email:'', member:null, isAdmin:false, isOwner:false, myNam
   cfg:JSON.parse(JSON.stringify(DEFAULT_CFG)), mine:[], all:[], members:[], loaded:false,
   scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:'',level:'',rubric:RUBRIC}, openRow:null, includeUnfmt:false, authMode:'login',
   isExpert:false, tasks:[], myTasks:[], fromTask:null, cmpOpen:null, cmpData:{}, rvWeek:null,
+  trialPeriods:[], feedbacks:[], boardGroup:'regular', reviewSelected:new Set(),
   canSync:false, reasons:Array(8).fill(''), reasonKeys:reasonTieKeys(), issueRows:[], issuesBy:{}, syncItems:null, syncState:{}, syncCopied:false, openPair:null };
 
 /* ---------------- data layer (Supabase) ---------------- */
@@ -71,6 +72,12 @@ function makeApi(){
     genReview: () => un(sb.rpc('generate_review_tasks_v21',{p_manual:true})),
     cancelReview: id => un(sb.rpc('cancel_review_task_v21',{p_id:id})),
     addReview: cls => un(sb.rpc('add_review_task_v21',{p_class:cls})),
+    addReviewScore: id => un(sb.rpc('add_review_score_v21',{p_score:id})),
+    startReview: id => un(sb.rpc('start_review_task_v21',{p_id:id})),
+    trialPeriods: () => un(sb.from('trial_periods_v21').select('*').order('started_at')),
+    setTrial: (id,enable,start) => un(sb.rpc('set_trial_v21',{p_user:id,p_enable:enable,p_start:start||null})),
+    feedbacks: () => pageAll(()=>sb.from('score_feedback_v21').select('*').order('created_at')),
+    addFeedback: (id,body) => un(sb.rpc('add_score_feedback_v21',{p_score:id,p_body:body})),
     reviewCompare: id => un(sb.rpc('review_compare_v21',{p_id:id})),
     issues: uid => pageAll(()=>{ let q=sb.from('issues_v21').select('*').order('created_at'); if(uid) q=q.eq('user_id',uid); return q; }),
     insertIssues: rows => un(sb.from('issues_v21').insert(rows).select()),
@@ -242,7 +249,7 @@ async function saveForm(e){
     try{ await saveIssues(saved.id, iss); }catch(err){ toast('分数已保存，但问题没有保存成功：'+errMsg(err)+'。请在"我的记录"里编辑这条再保存一次'); return; }
     const wasTask=S.fromTask&&!S.editing;
     toast(S.editing?'已保存修改':(wasTask?'已保存，复评任务已完成':'已保存')); resetForm(false);
-    if(wasTask){ await loadTasks(); location.hash='review'; }
+    if(wasTask){ await loadData(); location.hash='review'; }
   }catch(err){ toast(errMsg(err)); }
   finally{ btn.disabled=false; }
 }
@@ -292,7 +299,7 @@ function renderMine(){
     rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
       (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td><td class="num">${issueCount(r)}</td>
       <td class="row" style="flex-wrap:nowrap">${r.rubric===RUBRIC?'<button class="btn sm" data-act="edit" type="button">编辑</button><button class="btn sm danger" data-act="del" type="button">删除</button>':'<span class="hint">历史评分仅供查看</span>'}</td></tr>
-      ${S.openRow===r.id?`<tr class="detail"><td colspan="20">${detailText(r)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
+      ${S.openRow===r.id?`<tr class="detail"><td colspan="20">${detailText(r)}${feedbackPanel(r.id,r.updatedAt,false)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
   box.onclick=async e=>{
     const tr=e.target.closest('tr[data-id]'); if(!tr) return; const r=S.mine.find(x=>x.id===tr.dataset.id); if(!r) return;
     const act=e.target.closest('button')&&e.target.closest('button').dataset.act;
@@ -316,6 +323,13 @@ function detailText(r){
   if(r.url) h+=`\n\n<b>回放</b> <a href="${esc(r.url)}" target="_blank" rel="noopener">打开回放</a>`;
   return h;
 }
+function feedbackPanel(scoreId, updatedAt, canWrite){
+  const list=S.feedbacks.filter(f=>f.score_id===scoreId);
+  let h='<div class="feedback"><h3>评分反馈</h3>';
+  h+=list.length?list.map(f=>`<div class="feedback-item"><b data-no-translate>${esc(f.author_name)}</b> · ${f.author_role==='admin'?'管理员':'专家'} · ${esc(localDay(f.created_at))}${updatedAt&&f.score_updated_at!==updatedAt?' · <span class="pill warn">记录此后已修改</span>':''}<div data-no-translate>${esc(f.body)}</div></div>`).join(''):'<p class="hint">暂无反馈</p>';
+  if(canWrite) h+=`<form data-feedback="${esc(scoreId)}" class="row"><textarea name="body" maxlength="2000" required placeholder="写给打分者的具体反馈" style="min-width:240px;flex:1"></textarea><button class="btn sm primary" type="submit">发送反馈</button></form>`;
+  return h+'</div>';
+}
 /* ---------------- data for board ---------------- */
 function memberById(uid){ return S.members.find(m=>m.user_id===uid)||(S.member&&S.member.user_id===uid?S.member:null); }
 function allRecords(){
@@ -327,6 +341,13 @@ function revName(id){ if(id==='import:regular') return '首批 · 打分者';
 function revKind(id){ if(id.indexOf('import:')===0) return '首批导入'; const m=memberById(id)||{}; return m.is_owner?'管理员（所有者）':m.is_admin?'管理员':'打分者'; }
 function roleOf(id){ if(id.indexOf('import:')===0) return id.slice(7); const m=memberById(id); return m?m.compare_role:'none'; }
 const ROLE_TXT={regular:'常规打分者',expert:'专家',none:'不参与对比'};
+function isTrial(r){
+  if(r.rubric!==RUBRIC||r.import_role||!r.user_id||!r.createdAt) return false;
+  const at=new Date(r.createdAt).getTime();
+  return S.trialPeriods.some(p=>p.user_id===r.user_id && at>=new Date(p.started_at).getTime() &&
+    (!p.ended_at || at<new Date(p.ended_at).getTime()));
+}
+function isManualPair(p){ return S.tasks.some(t=>t.score_id===p.n.id&&t.created_by==='admin'&&t.status!=='cancelled'); }
 
 function inRange(r){ const f=S.filter; if(f.from&&(r.date||'')<f.from) return false; if(f.to&&(r.date||'')>f.to) return false; if(f.type&&r.type!==f.type) return false; if(f.level&&r.level!==f.level) return false; return true; }
 function allIssues(r){
@@ -382,27 +403,37 @@ function scatter(P){
 function renderBoard(){
   const box=$('#boardBody'); if(!box) return;
   if(!API) return;
-  const all=allRecords().filter(r=>r.rubric===S.filter.rubric); const ranged=all.filter(inRange);
+  const source=allRecords().filter(r=>r.rubric===S.filter.rubric);
+  const trialView=S.filter.rubric===RUBRIC&&S.boardGroup==='trial';
+  const all=source.filter(r=>!isTrial(r));
+  const trialRecords=source.filter(r=>isTrial(r));
+  const ranged=(trialView?trialRecords:all).filter(inRange);
   // reviewer filter options
-  const revIds=[...new Set(all.map(r=>r.rev))]; const sel=$('#q-rev'); const cur=S.filter.rev;
+  const revIds=[...new Set((trialView?trialRecords:all).map(r=>r.rev))]; const sel=$('#q-rev'); const cur=S.filter.rev;
   sel.innerHTML='<option value="">全部</option>'+revIds.map(id=>`<option value="${esc(id)}">${esc(revName(id))}</option>`).join(''); sel.value=cur;
   const shown=S.filter.rev?ranged.filter(r=>r.rev===S.filter.rev):ranged;
-  if(!all.length){ box.innerHTML=allRecords().length?'<div class="empty">该评分版本暂无记录。</div>':'<div class="empty">还没有任何打分记录。在「设置」里添加成员，他们保存后会出现在这里。</div>'; return; }
-  const P=pairs(ranged), st=stats(P), T=S.cfg.targets||DEFAULT_CFG.targets;
-  const ok={diff:st.n?Math.abs(st.diff)<=T.diff[0]:null, pass:st.n?Math.round(st.pass*100)>=Math.round(T.pass[0]*100):null,
-    icc:st.icc==null?null:Math.round(st.icc*100)>=Math.round(T.icc[0]*100), dim:st.dim==null?null:Math.round(st.dim*100)>=Math.round(T.dim[0]*100)};
+  if(!(trialView?trialRecords:all).length){ box.innerHTML=allRecords().length?'<div class="empty">该范围暂无记录。</div>':'<div class="empty">还没有任何打分记录。在「设置」里添加成员，他们保存后会出现在这里。</div>'; return; }
+  const expertPool=source.filter(r=>r.role==='expert'&&inRange(r));
+  const pairPool=trialView?ranged.concat(expertPool):ranged;
+  const allPairs=pairs(pairPool).filter(p=>trialView?isTrial(p.n):!isTrial(p.n));
+  const manualPairs=allPairs.filter(p=>isManualPair(p)&&(!S.filter.rev||p.n.rev===S.filter.rev||p.e.rev===S.filter.rev));
+  const P=(trialView?allPairs:allPairs.filter(p=>!isManualPair(p))).filter(p=>!S.filter.rev||p.n.rev===S.filter.rev||p.e.rev===S.filter.rev);
+  const st=stats(P), T=S.cfg.targets||DEFAULT_CFG.targets;
+  const enough=!trialView&&new Set(P.map(p=>p.c)).size>=30;
+  const ok={diff:enough?Math.abs(st.diff)<=T.diff[0]:null, pass:enough?Math.round(st.pass*100)>=Math.round(T.pass[0]*100):null,
+    icc:enough&&st.icc!=null?Math.round(st.icc*100)>=Math.round(T.icc[0]*100):null, dim:enough&&st.dim!=null?Math.round(st.dim*100)>=Math.round(T.dim[0]*100):null};
   const classes=new Set(shown.map(r=>r.classId)).size;
   let h=(S.filter.rubric==='Unspecified'?'<div class="notice">原记录未标注评分标准；这组统计仅供历史参考。</div>':'')+`<div class="kpis">
     <div class="kpi"><span class="v">${shown.length}</span><span class="l">打分记录</span></div>
     <div class="kpi"><span class="v">${classes}</span><span class="l">课程（Class ID）</span></div>
     <div class="kpi"><span class="v">${new Set(shown.map(r=>r.rev)).size}</span><span class="l">打分人</span></div>
-    <div class="kpi"><span class="v">${P.length}</span><span class="l">打分者 / 专家配对</span></div>
+    <div class="kpi"><span class="v">${P.length}</span><span class="l">打分者 / 专家配对（${new Set(P.map(p=>p.c)).size} 节课）</span></div>
     <div class="kpi"><span class="v">${f1(avg(shown.map(r=>r.total)))}</span><span class="l">平均总分</span></div></div>`;
-  h+=progress(all);
+  h+=progress(trialView?trialRecords:all);
   h+=levelCard(shown);
   h+=spreadCard(shown);
   // consistency
-  h+=`<div class="card"><h2>打分一致性<small>按 Class ID 配对常规打分者与专家；单周只作预警，累计约 40 节再判断是否达标</small></h2>`;
+  h+=`<div class="card"><h2>${trialView?'新人试打校准':'打分一致性'}<small>同一 Class ID 配对；${trialView?'仅用于试打反馈，不计入常规结果':'定向复评单列；至少 30 节不同课程才显示达标判断'}</small></h2><p class="hint">本期 ${P.length} 组配对，涉及 ${new Set(P.map(p=>p.c)).size} 节不同课程。复评抽课偏向低分和问题课，结果只代表已复评课程；样本少时请看具体分歧。</p>`;
   if(!P.length) h+='<div class="empty">所选范围内还没有同一节课的常规打分者和专家双人记录。</div>';
   else{
     h+=`<div class="two"><div class="tbl"><table class="tgt"><thead><tr><th>指标</th><th class="num">初始阶段（暂定）</th><th class="num">稳定阶段</th><th class="num">本期</th><th>状态</th></tr></thead><tbody>
@@ -426,6 +457,9 @@ function renderBoard(){
         return `<tr><td>${esc(d.n)}</td><td class="num">${f1(a)}</td><td class="num">${f1(b)}</td><td class="num">${sgn(a-b)}</td><td class="num">${pct(v.filter(p=>p.n.s[i]===p.e.s[i]).length/v.length)}</td><td class="num">${pct(v.filter(p=>Math.abs(p.n.s[i]-p.e.s[i])<=1).length/v.length)}</td><td class="num">${v.filter(p=>p.n.s[i]>p.e.s[i]).length}</td><td class="num">${v.filter(p=>p.n.s[i]<p.e.s[i]).length}</td></tr>`; }).join('')}</tbody></table></div>`;
   }
   h+='</div>';
+  if(!trialView&&manualPairs.length){
+    h+=`<div class="card"><h2>管理员定向复评<small>用于拉齐标准，单独展示</small></h2><div class="tbl"><table><thead><tr><th>Class ID</th><th>打分者</th><th>打分者总分</th><th>专家总分</th><th>差</th></tr></thead><tbody>${manualPairs.map(p=>`<tr><td>${esc(p.c)}</td><td>${esc(revName(p.n.rev))}</td><td>${f1(p.n.total)}</td><td>${f1(p.e.total)}</td><td>${sgn(p.d)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
   h+=disagreeCard(P);
   // reviewer overview
   const byRev={}; shown.forEach(r=>(byRev[r.rev]=byRev[r.rev]||[]).push(r));
@@ -452,16 +486,24 @@ function renderBoard(){
   h+='</div>';
   // all records
   const recs=shown.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看打分原因和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="csv">导出当前筛选明细 CSV</button></div>
-    <div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
-    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
-      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="19">${detailText(r)}</td></tr>`:''}`; }).join('')}</tbody></table></div>
+  h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看原因、反馈和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="btnManualSelected">将所选记录指定复评</button><button class="btn sm" type="button" id="csv">导出当前筛选明细 CSV</button></div>
+    <div class="tbl"><table><thead><tr><th>复评</th><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
+    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td>${r.rubric===RUBRIC&&r.role==='regular'&&!r.archived?`<input type="checkbox" data-review-select="${esc(r.id)}" aria-label="选择 Class ${esc(r.classId)} 复评" ${S.reviewSelected.has(r.id)?'checked':''}>`:'—'}</td><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
+      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="20">${detailText(r)}${feedbackPanel(r.id,r.updatedAt,r.rubric===RUBRIC&&r.role==='regular')}</td></tr>`:''}`; }).join('')}</tbody></table></div>
     ${recs.length>400?`<p class="hint">只显示最近 400 条；导出 CSV 包含全部 ${recs.length} 条。</p>`:''}</div>`;
   box.innerHTML=h;
   const ax=$('#progAxis'); if(ax) ax.onclick=e=>{ const b=e.target.closest('button'); if(b){ S.progAxis=b.dataset.a; renderBoard(); } };
   const inc=$('#incUnf'); if(inc) inc.onchange=()=>{ S.includeUnfmt=inc.checked; renderBoard(); };
   $('#csv').onclick=()=>exportCsv(recs);
-  box.querySelectorAll('tr[data-k]').forEach(tr=>tr.onclick=()=>{ S.openRow=(S.openRow===tr.dataset.k)?null:tr.dataset.k; renderBoard(); });
+  box.querySelectorAll('input[data-review-select]').forEach(input=>input.onchange=()=>{ if(input.checked) S.reviewSelected.add(input.dataset.reviewSelect); else S.reviewSelected.delete(input.dataset.reviewSelect); });
+  $('#btnManualSelected').onclick=async()=>{
+    const selected=[...S.reviewSelected]; if(!selected.length){ toast('请先勾选打分记录'); return; }
+    const classes=new Set(), errors=[]; let count=0; const btn=$('#btnManualSelected'); btn.disabled=true;
+    for(const id of selected){ const r=source.find(x=>x.id===id); if(!r||classes.has(r.classId)){ errors.push('同一课程只能指定一条打分记录'); continue; }
+      classes.add(r.classId); try{ await API.addReviewScore(id); count++; S.reviewSelected.delete(id); }catch(err){ errors.push(errMsg(err)); } }
+    await loadTasks(); toast(errors.length?`已指定 ${count} 条；${errors[0]}`:`已指定 ${count} 条复评`); renderBoard();
+  };
+  box.querySelectorAll('tr[data-k]').forEach(tr=>tr.onclick=e=>{ if(e.target.closest('input,button,a,form')) return; S.openRow=(S.openRow===tr.dataset.k)?null:tr.dataset.k; renderBoard(); });
   box.querySelectorAll('tr[data-pair]').forEach(tr=>tr.onclick=()=>{ S.openPair=(S.openPair===tr.dataset.pair)?null:tr.dataset.pair; renderBoard(); });
 }
 function levelMix(L){ const m={}; L.forEach(r=>{ if(r.level) m[r.level]=(m[r.level]||0)+1; }); return Object.keys(m).sort().map(k=>`${esc(k)}×${m[k]}`).join(' · ')||'—'; }
@@ -496,10 +538,10 @@ function copyIssues(list){
 function exportCsv(recs, all=false){
   const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const head=LANG==='en'
-    ? ['Record ID','Observation Date','Completion Date','Course / Product Version','Scoring Date','Scorer','Role','Comparison Role','Rubric Version','Class Type','Level','Lesson ID','Class ID','Teacher','Country','Completion Status','Camera',...DIMS.map(d=>d.n),'Weighted Total',...DIMS.map(d=>d.n+' · Reason'),'Issues','Improvement Suggestions','Highlights (legacy)','Recording URL']
-    : ['记录 ID','看课日期','完课日期','版本号','打分日期','打分人','身份','对比角色','评分标准','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分',...DIMS.map(d=>d.n+'·原因'),'问题','优化建议','亮点（旧）','回放链接'];
+    ? ['Record ID','Observation Date','Completion Date','Course / Product Version','Scoring Date','Scorer','Role','Comparison Role','Record Group','Rubric Version','Class Type','Level','Lesson ID','Class ID','Teacher','Country','Completion Status','Camera',...DIMS.map(d=>d.n),'Weighted Total',...DIMS.map(d=>d.n+' · Reason'),'Issues','Improvement Suggestions','Highlights (legacy)','Recording URL']
+    : ['记录 ID','看课日期','完课日期','版本号','打分日期','打分人','身份','对比角色','记录范围','评分标准','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分',...DIMS.map(d=>d.n+'·原因'),'问题','优化建议','亮点（旧）','回放链接'];
   const issTxt=r=>(S.issuesBy[r.id]||[]).map(x=>`${x.priority}｜${x.root}｜${x.time||'—'}｜${x.description}`).concat(r.issues?[r.issues]:[]).join('\n');
-  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.id,r.date,r.completionDate,r.courseVersion,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',rubricLabel(r.rubric),r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
+  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.id,r.date,r.completionDate,r.courseVersion,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',isTrial(r)?(LANG==='en'?'New Scorer Trial':'新人试打'):(LANG==='en'?'Regular':'常规'),rubricLabel(r.rubric),r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(all?'TQA_V2.1_全部打分明细_':'TQA_V2.1_筛选打分明细_')+today()+'.csv'; document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -517,7 +559,8 @@ async function loadTasks(){
     S.myTasks=my||[]; if(S.isAdmin) S.tasks=all||[];
   }catch(e){ S.myTasks=[]; S.tasks=[]; toast('复评任务读取失败：'+errMsg(e)); }
 }
-function startTask(t){
+async function startTask(t){
+  await API.startReview(t.id);
   resetForm(false);
   $('#f-date').value=t.date||today(); $('#f-type').value=t.type||'体验课'; $('#f-level').value=t.level||'Lv1';
   $('#f-lesson').value=t.lesson||''; $('#f-class').value=t.class_id||''; fillTeachers($('#f-teacher'),t.teacher||'');
@@ -542,19 +585,19 @@ function cmpHtml(t){
   if(!me) h+='<p class="hint">没找到专家对这节课的记录。</p>';
   d.forEach(x=>{ const why=(x.reasons||[]).map((w,i)=>w?`${SHORT[i]}：${esc(w)}`:null).filter(Boolean);
     const il=(x.issue_list||[]).map(q=>`${q.priority} · ${esc(q.root)}${q.time?' · '+esc(q.time):''}｜${esc(q.description)}`);
-    h+=`<div style="white-space:pre-wrap"><b>${esc(x.who)} 的打分原因</b>\n${why.length?why.join('\n'):'—'}\n<b>${esc(x.who)} 的问题</b>\n${il.concat(x.issues?[esc(x.issues)]:[]).join('\n')||'—'}${x.hl?`\n<b>亮点</b>\n${esc(x.hl)}`:''}${x.sugg?`\n<b>优化建议</b>\n${esc(x.sugg)}`:''}</div>`; });
+    h+=`<div style="white-space:pre-wrap"><b>${esc(x.who)} 的打分原因</b>\n${why.length?why.join('\n'):'—'}\n<b>${esc(x.who)} 的问题</b>\n${il.concat(x.issues?[esc(x.issues)]:[]).join('\n')||'—'}${x.hl?`\n<b>亮点</b>\n${esc(x.hl)}`:''}${x.sugg?`\n<b>优化建议</b>\n${esc(x.sugg)}`:''}</div>${x.id?feedbackPanel(x.id,x.updated_at,true):''}`; });
   return h+'</div>';
 }
 function taskRow(t,isOpen){
   const late=isOpen&&t.task_date<today(); const u=safeUrl(t.url);
   return `<div class="task" data-tid="${esc(t.id)}"><div>
     <div class="meta"><span class="mono"><b>Class ${esc(t.class_id)}</b></span><span>Lesson ${esc(t.lesson||'—')}</span><span>${esc(t.type||'')} · ${esc(t.level||'')}</span><span>老师 ${esc(t.teacher||'—')}</span>${t.country?`<span>${esc(t.country)}</span>`:''}<span>看课日期 ${esc(t.date||'—')}</span>${t.completion_date?`<span>完课日期 ${esc(t.completion_date)}</span>`:''}${t.course_version?`<span>版本号 ${esc(t.course_version)}</span>`:''}${u?`<a href="${esc(u)}" target="_blank" rel="noopener">打开回放</a>`:''}</div>
-    <div class="sub">分配于 ${esc(t.task_date)}（${wdOf(t.task_date)}）${late?' <span class="pill warn">已过分配日</span>':''}${t.done_at?' · 完成于 '+esc(localDay(t.done_at)):''}</div></div>
+    <div class="sub">${t.created_by==='admin'?'<span class="pill good">管理员指定 · 优先</span> ':''}${t.is_trial?'<span class="pill neu">新人试打</span> ':''}分配于 ${esc(t.task_date)}（${wdOf(t.task_date)}）${late?' <span class="pill warn">已过分配日</span>':''}${t.done_at?' · 完成于 '+esc(localDay(t.done_at)):''}</div></div>
     <div class="row">${isOpen?'<button class="btn sm primary" type="button" data-act="start">开始打分</button>':`<button class="btn sm" type="button" data-act="cmp">${S.cmpOpen===t.id?'收起':'查看对比'}</button>`}</div>
     ${S.cmpOpen===t.id?cmpHtml(t):''}</div>`;
 }
 function expertPart(){
-  const open=S.myTasks.filter(t=>t.status==='open'), done=S.myTasks.filter(t=>t.status==='done').sort((a,b)=>(b.done_at||'').localeCompare(a.done_at||''));
+  const open=S.myTasks.filter(t=>t.status==='open').sort((a,b)=>(a.created_by==='admin'?0:1)-(b.created_by==='admin'?0:1)||a.task_date.localeCompare(b.task_date)), done=S.myTasks.filter(t=>t.status==='done').sort((a,b)=>(b.done_at||'').localeCompare(a.done_at||''));
   const td=today(), tdN=open.filter(t=>t.task_date===td).length;
   let h=`<div class="kpis"><div class="kpi"><span class="v">${open.length}</span><span class="l">待复评（其中今天分配 ${tdN}）</span></div>
     <div class="kpi"><span class="v">${done.filter(t=>localDay(t.done_at)>=monday(td)).length}</span><span class="l">本周已完成</span></div></div>`;
@@ -565,13 +608,16 @@ function expertPart(){
 function adminPart(){
   const C=rcfg(), td=today(), ws=S.rvWeek||monday(td), we=addDays(ws,6);
   const all=S.tasks.filter(t=>t.week_start===ws), W=all.filter(t=>t.status!=='cancelled'), nCan=all.length-W.length;
-  const done=W.filter(t=>t.status==='done').length;
-  const regs=S.members.filter(m=>m.active&&m.compare_role==='regular'&&m.user_id);
-  const ids=[...new Set(regs.map(m=>m.user_id).concat(W.map(t=>t.scorer_id).filter(Boolean)))];
+  const trialTask=t=>S.all.some(r=>r.id===t.score_id&&isTrial(r));
+  const regularW=W.filter(t=>!trialTask(t)), trialW=W.filter(trialTask);
+  const done=regularW.filter(t=>t.status==='done').length;
+  const regs=S.members.filter(m=>m.active&&m.compare_role==='regular'&&m.user_id&&
+    !S.trialPeriods.some(p=>p.user_id===m.user_id&&!p.ended_at));
+  const ids=[...new Set(regs.map(m=>m.user_id).concat(regularW.map(t=>t.scorer_id).filter(Boolean)))];
   const experts=S.members.filter(m=>m.active&&m.compare_role==='expert');
-  const per=C.per_scorer_min, scored=uid=>S.all.filter(r=>r.rubric===RUBRIC&&r.user_id===uid&&localDay(r.createdAt)>=ws&&localDay(r.createdAt)<=we).length;
-  const covS=ids.filter(id=>W.filter(t=>t.scorer_id===id).length>=per).length;
-  const lvN=l=>W.filter(t=>t.level===l).length; const covL=C.levels.filter(l=>lvN(l)>0).length;
+  const per=C.per_scorer_min, scored=uid=>S.all.filter(r=>r.rubric===RUBRIC&&!isTrial(r)&&r.user_id===uid&&localDay(r.createdAt)>=ws&&localDay(r.createdAt)<=we).length;
+  const covS=ids.filter(id=>regularW.filter(t=>t.scorer_id===id).length>=per).length;
+  const lvN=l=>regularW.filter(t=>t.level===l).length; const covL=C.levels.filter(l=>lvN(l)>0).length;
   const isDay=C.days.indexOf(((new Date(td+'T00:00:00').getDay()+6)%7)+1)>=0;
   let h='';
   if(!experts.length) h+='<div class="notice"><b>还没有专家：</b>请在「设置 → 成员与权限」把专家的对比角色设为"专家"，任务才会显示给他。</div>';
@@ -580,20 +626,21 @@ function adminPart(){
   h+=`<div class="card"><div class="row"><h2>本周复评<small>${esc(ws)} ～ ${esc(we)}</small></h2><span class="spacer"></span>
     <div class="seg" role="group" aria-label="切换周"><button type="button" data-act="wk" data-d="-7">‹ 上一周</button><button type="button" data-act="wk" data-d="0" aria-pressed="${ws===monday(td)}">本周</button><button type="button" data-act="wk" data-d="7">下一周 ›</button></div></div>
     <div class="kpis">
-      <div class="kpi"><span class="v">${W.length}</span><span class="l">已分配（目标 ${C.weekly_min}–${C.weekly_max}）</span></div>
+      <div class="kpi"><span class="v">${regularW.length}</span><span class="l">常规已分配（目标 ${C.weekly_min}–${C.weekly_max}）</span></div>
+      <div class="kpi"><span class="v">${trialW.length}</span><span class="l">试打定向复评</span></div>
       <div class="kpi"><span class="v">${done}</span><span class="l">专家已完成</span></div>
-      <div class="kpi"><span class="v">${W.length-done}</span><span class="l">待完成</span></div>
+      <div class="kpi"><span class="v">${regularW.length-done}</span><span class="l">待完成</span></div>
       <div class="kpi"><span class="v">${covS}/${ids.length}</span><span class="l">打分者已覆盖（每人 ≥${per} 节）</span></div>
       <div class="kpi"><span class="v">${covL}/${C.levels.length}</span><span class="l">级别已覆盖</span></div></div>
     <div class="two"><div class="tbl"><table><thead><tr><th>常规打分者</th><th class="num">本周打分</th><th class="num">被抽复评</th><th class="num">专家已完成</th><th>覆盖要求</th></tr></thead><tbody>${
-      ids.length?ids.map(id=>{ const n=W.filter(t=>t.scorer_id===id).length, k=W.filter(t=>t.scorer_id===id&&t.status==='done').length;
+      ids.length?ids.map(id=>{ const n=regularW.filter(t=>t.scorer_id===id).length, k=regularW.filter(t=>t.scorer_id===id&&t.status==='done').length;
         return `<tr><td>${esc(revName(id))}</td><td class="num">${scored(id)}</td><td class="num">${n}</td><td class="num">${k}</td><td>${n>=per?'<span class="pill good">已达到</span>':`<span class="pill warn">还差 ${per-n} 节</span>`}</td></tr>`; }).join(''):'<tr><td colspan="5">还没有对比角色为"常规打分者"的成员。</td></tr>'}</tbody></table></div>
       <div class="field"><label>级别覆盖（全部打分者合计）</label><div class="chips">${C.levels.map(l=>{ const n=lvN(l); return `<span class="pill ${n?'good':'warn'}">${esc(l)} ${n?'× '+n:'未覆盖'}</span>`; }).join('')}</div>
         <p class="hint" style="margin-top:8px">今天${wdOf(td)}，${isDay&&C.enabled?'是复评日，07:00 已自动生成':'不是自动复评日'}。每个复评日每天 ${C.daily_min}–${C.daily_max} 节，优先补齐还没覆盖的打分者和级别，其次是有严重问题或低分的课；候选为最近 ${C.pool_days} 天内、截止前一天保存的常规打分记录。</p>
         <div class="row" style="margin-top:6px"><button class="btn sm primary" type="button" data-act="gen">补足今天的任务</button></div>
         <form class="row" id="addTask" novalidate style="margin-top:6px"><input type="text" id="addCls" placeholder="Class ID" style="max-width:160px" inputmode="numeric"><button class="btn sm" type="submit">指定这节课给专家</button></form></div></div>
     ${W.length?`<div class="tbl"><table><thead><tr><th>分配日</th><th>Class ID</th><th>Lesson</th><th>课型</th><th>级别</th><th>老师</th><th>打分者</th><th>抽取原因</th><th>状态</th><th></th></tr></thead><tbody>${
-      W.slice().sort((a,b)=>a.task_date.localeCompare(b.task_date)||(a.created_at||'').localeCompare(b.created_at||'')).map(t=>`<tr data-tid="${esc(t.id)}"><td class="mono">${esc(t.task_date.slice(5))} ${wdOf(t.task_date)}</td><td class="mono">${esc(t.class_id)}</td><td class="mono">${esc(t.lesson||'')}</td><td>${esc(t.type||'')}</td><td>${esc(t.level||'')}</td><td>${esc(t.teacher||'')}</td><td>${esc(revName(t.scorer_id||''))}</td><td>${esc(t.reason||'')}</td>
+      W.slice().sort((a,b)=>(a.created_by==='admin'?0:1)-(b.created_by==='admin'?0:1)||a.task_date.localeCompare(b.task_date)||(a.created_at||'').localeCompare(b.created_at||'')).map(t=>`<tr data-tid="${esc(t.id)}"><td class="mono">${esc(t.task_date.slice(5))} ${wdOf(t.task_date)}</td><td class="mono">${esc(t.class_id)}</td><td class="mono">${esc(t.lesson||'')}</td><td>${esc(t.type||'')}</td><td>${esc(t.level||'')}</td><td>${esc(t.teacher||'')}</td><td>${esc(revName(t.scorer_id||''))}${S.all.some(r=>r.id===t.score_id&&isTrial(r))?' <span class="pill neu">新人试打</span>':''}</td><td>${esc(t.reason||'')}</td>
         <td>${t.status==='done'?'<span class="pill good">已完成</span>':t.task_date<td?'<span class="pill warn">逾期未完成</span>':'<span class="pill neu">待完成</span>'}</td>
         <td class="row" style="flex-wrap:nowrap">${t.status==='done'?`<button class="btn sm" type="button" data-act="cmp">${S.cmpOpen===t.id?'收起':'对比'}</button>`:'<button class="btn sm danger" type="button" data-act="cancel">取消</button>'}</td></tr>${S.cmpOpen===t.id?`<tr class="detail"><td colspan="10" style="white-space:normal">${cmpHtml(t)}</td></tr>`:''}`).join('')}</tbody></table></div>`:'<div class="empty">这一周还没有复评任务。</div>'}
     ${nCan?`<p class="hint">本周另有 ${nCan} 条已取消的任务，被取消的课本周不会再被抽中。</p>`:''}</div>`;
@@ -607,7 +654,7 @@ function renderReview(){
     const b=e.target.closest('button[data-act]'); if(!b) return; const act=b.dataset.act;
     const host=b.closest('[data-tid]'); const t=host&&find(host.dataset.tid);
     if(act==='wk'){ const n=+b.dataset.d; S.rvWeek=n?addDays(S.rvWeek||monday(today()),n):null; renderReview(); return; }
-    if(act==='start'&&t){ startTask(t); return; }
+    if(act==='start'&&t){ try{ await startTask(t); }catch(err){ toast(errMsg(err)); } return; }
     if(act==='cmp'&&t){ S.cmpOpen=S.cmpOpen===t.id?null:t.id; renderReview();
       if(S.cmpOpen&&!S.cmpData[t.id]){ try{ S.cmpData[t.id]=await API.reviewCompare(t.id); }catch(err){ S.cmpData[t.id]={error:errMsg(err)}; } renderReview(); } return; }
     if(act==='cancel'&&t){
@@ -794,6 +841,9 @@ function renderSetup(){
         <td class="num">${m.user_id?(cnt[m.user_id]||0):0}</td>
         <td class="row" style="flex-wrap:nowrap">${m.is_owner||self?'':`<button class="btn sm" type="button" data-act="toggle">${m.active?'停用':'启用'}</button>`}${m.user_id&&!self&&!lockOwner?'<button class="btn sm" type="button" data-act="pw">重设密码</button>':''}${!m.user_id&&!m.is_owner?'<button class="btn sm danger" type="button" data-act="del">删除</button>':''}</td></tr>${S.resetFor===m.email?`<tr class="detail"><td colspan="8"><form class="row" data-reset="${e}" novalidate style="white-space:normal"><span>给 ${esc(m.name||m.email)} 设一个新密码：</span><input type="text" data-newpw placeholder="至少 8 位" style="max-width:180px"><button class="btn sm primary" type="submit">确定</button><button class="btn sm" type="button" data-act="pwcancel">取消</button><span class="hint">设好后把新密码告诉对方，对方登录后可在"我的记录"里自己再改。</span></form></td></tr>`:''}`; }).join('')}</tbody></table></div>
     <p class="hint">账号与成员名单和原平台共用；这里修改成员或密码会影响两个平台。勾选"同步问题"的成员可使用同步页。V2.1 的打分记录、复评任务和问题记录单独保存。</p></div>
+  <div class="card"><h2>新人试打<small>仅 V2.1 管理；试打记录在看板单独显示</small></h2><div class="tbl"><table><thead><tr><th>打分者</th><th>阶段</th><th>开始日期</th><th>操作</th></tr></thead><tbody>${
+    S.members.filter(m=>m.user_id&&m.active&&m.compare_role==='regular').map(m=>{ const open=S.trialPeriods.find(p=>p.user_id===m.user_id&&!p.ended_at);
+      return `<tr data-trial-user="${esc(m.user_id)}"><td>${esc(m.name||m.email)}</td><td>${open?'<span class="pill warn">新人试打中</span>':'常规打分'}</td><td>${open?esc(localDay(open.started_at)):`<input type="date" data-trial-start value="${today()}">`}</td><td><button class="btn sm" type="button" data-trial-action="${open?'end':'start'}">${open?'结束试打':'开始试打'}</button></td></tr>`; }).join('')}</tbody></table></div><p class="hint">开始日期可回填已打的 V2.1 课程；结束后，试打期间保存的记录仍留在试打看板。</p></div>
   <div class="two">
     <div class="card"><h2>老师名单</h2><div class="field"><label for="s-teachers">用逗号分隔</label><input type="text" id="s-teachers" value="${esc((c.teachers||[]).join(', '))}"></div></div>
     <div class="card"><h2>问题导出字段<small>「同步问题」复制到反馈池时使用</small></h2><div class="grid">
@@ -808,6 +858,14 @@ function renderSetup(){
   ${reviewCfgCard()}
   <p class="hint">老师名单、导出字段、目标范围和复评参数改完后点右上角"保存设置"；成员的修改会立即生效。</p>`;
   $('#addMem').onsubmit=addMember;
+  box.querySelectorAll('[data-trial-action]').forEach(b=>b.onclick=async()=>{
+    const row=b.closest('[data-trial-user]'), enable=b.dataset.trialAction==='start';
+    const day=enable?row.querySelector('[data-trial-start]').value:null;
+    if(enable&&!day){ toast('请选择试打开始日期'); return; }
+    b.disabled=true;
+    try{ await API.setTrial(row.dataset.trialUser,enable,day); S.trialPeriods=await API.trialPeriods(); toast(enable?'已开始试打':'已结束试打'); renderSetup(); }
+    catch(err){ toast(errMsg(err)); b.disabled=false; }
+  });
   box.querySelectorAll('tr[data-email] [data-f]').forEach(el=>el.addEventListener('change',()=>{
     const email=el.closest('tr').dataset.email, f=el.dataset.f; let v=el.value;
     if(f==='is_admin') v=v==='1'; if(f==='name') v=v.trim()||null; if(f==='can_sync') v=el.checked;
@@ -910,9 +968,14 @@ async function loadData(){
     if(S.isAdmin){ const [rows,mem,iss]=await Promise.all([API.scores(null),API.members(),API.issues(null)]); S.all=rows.map(fromDb); S.members=mem; S.mine=S.all.filter(r=>r.user_id===S.uid); indexIssues(iss); }
     else { const [rows,iss]=await Promise.all([API.scores(S.uid),API.issues(S.uid)]); S.mine=rows.map(fromDb); indexIssues(iss); }
   }catch(e){ toast(errMsg(e)); }
+  const [trial,feedback]=await Promise.allSettled([
+    (S.isAdmin||S.isExpert)?API.trialPeriods():Promise.resolve([]), API.feedbacks()
+  ]);
+  if(trial.status==='fulfilled') S.trialPeriods=trial.value||[];
+  if(feedback.status==='fulfilled') S.feedbacks=feedback.value||[];
   await loadTasks();
 }
-function clearState(){ Object.assign(S,{canSync:false,issuesBy:{},syncItems:null,syncState:{},syncCopied:false,openPair:null,uid:null,email:'',member:null,isAdmin:false,isOwner:false,isExpert:false,myName:'',mine:[],all:[],members:[],needName:false,renaming:false,editing:null,tasks:[],myTasks:[],fromTask:null,cmpOpen:null,cmpData:{}});
+function clearState(){ Object.assign(S,{canSync:false,issuesBy:{},syncItems:null,syncState:{},syncCopied:false,openPair:null,uid:null,email:'',member:null,isAdmin:false,isOwner:false,isExpert:false,myName:'',mine:[],all:[],members:[],trialPeriods:[],feedbacks:[],needName:false,renaming:false,editing:null,tasks:[],myTasks:[],fromTask:null,cmpOpen:null,cmpData:{}});
   document.querySelector('.tabs a[data-v="review"]').hidden=true; document.querySelector('.tabs a[data-v="sync"]').hidden=true; }
 async function logout(){ try{ await API.signOut(); }catch(_){} clearState(); resetForm(false); paintWho(); location.hash='score'; route(); }
 async function boot(){
@@ -920,13 +983,21 @@ async function boot(){
   $('#dims a').href='rubric.html?lang='+LANG;
   buildDims(); fillTeachers($('#f-teacher'),'Kim'); resetForm(false); setAuthMode('login');
   $('#form').addEventListener('submit',saveForm);
+  document.addEventListener('submit',async ev=>{
+    const f=ev.target.closest('form[data-feedback]'); if(!f) return;
+    ev.preventDefault(); const body=f.elements.body.value.trim(); if(!body) return;
+    const b=f.querySelector('button'); b.disabled=true;
+    try{ await API.addFeedback(f.dataset.feedback,body); S.feedbacks=await API.feedbacks(); toast('反馈已发送'); route(); }
+    catch(err){ toast(errMsg(err)); b.disabled=false; }
+  });
   $('#btnReset').onclick=()=>resetForm(false); $('#btnCancelEdit').onclick=()=>resetForm(false);
   $('#btnAddIssue').onclick=addIssueRow;
   $('#f-done').addEventListener('change',syncCompletionDate);
   $('#issueRows').addEventListener('click',e=>{ const b=e.target.closest('[data-act="rm"]'); if(!b) return; readIssueRows(); S.issueRows.splice(+b.closest('.irow').dataset.k,1); renderIssueRows(); });
   $('#btnSyncRefresh').onclick=async()=>{ const b=$('#btnSyncRefresh'); b.disabled=true; await loadSync(); b.disabled=false; toast('已刷新'); };
   $('#q-level').onchange=()=>{ S.filter.level=$('#q-level').value; renderBoard(); };
-  $('#q-rubric').onchange=()=>{ S.filter.rubric=$('#q-rubric').value; S.filter.rev=''; renderBoard(); };
+  $('#q-rubric').onchange=()=>{ S.filter.rubric=$('#q-rubric').value; S.filter.rev=''; S.reviewSelected.clear(); $('#q-group').disabled=S.filter.rubric!==RUBRIC; renderBoard(); };
+  $('#q-group').onchange=()=>{ S.boardGroup=$('#q-group').value; S.filter.rev=''; S.reviewSelected.clear(); renderBoard(); };
   $('#f-class').addEventListener('input',checkDup);
   $('#presets').onclick=e=>{ const b=e.target.closest('button'); if(b) setPreset(b.dataset.p); };
   ['q-from','q-to'].forEach(id=>$('#'+id).addEventListener('change',()=>{ S.filter.from=$('#q-from').value; S.filter.to=$('#q-to').value; document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed','false')); renderBoard(); }));
