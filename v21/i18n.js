@@ -238,6 +238,27 @@
     ['有严重问题', 'Serious Issues'], ['低分', 'Low Score'], ['覆盖打分者', 'Scorer Coverage'], ['随机抽查', 'Random Check'],
     ['管理员指定', 'Assigned by Administrator']
   );
+  entries.push(
+    ['记录范围','Record Group'], ['常规打分','Regular Scoring'], ['新人试打','New Scorer Trial'],
+    ['新人试打中','Trial in Progress'], ['开始试打','Start Trial'], ['结束试打','End Trial'],
+    ['开始日期','Start Date'], ['阶段','Stage'], ['操作','Action'],
+    ['仅 V2.1 管理；试打记录在看板单独显示','Managed in V2.1 only; trial records appear in a separate dashboard view'],
+    ['开始日期可回填已打的 V2.1 课程；结束后，试打期间保存的记录仍留在试打看板。','The start date may include earlier V2.1 scores. Scores saved during the trial remain in the trial view after it ends.'],
+    ['已开始试打','Trial started'], ['已结束试打','Trial ended'], ['请选择试打开始日期','Select a trial start date'],
+    ['评分反馈','Scoring Feedback'], ['暂无反馈','No feedback yet'],
+    ['记录此后已修改','Score edited after this feedback'],
+    ['写给打分者的具体反馈','Write specific feedback for the scorer'], ['发送反馈','Send Feedback'], ['反馈已发送','Feedback sent'],
+    ['将所选记录指定复评','Assign Selected Scores for Review'], ['请先勾选打分记录','Select a scoring record first'],
+    ['同一课程只能指定一条打分记录','Choose one scorer record per class'], ['已指定 ','Assigned '],
+    ['全部记录','All Records'], ['点击一行查看原因、反馈和问题','Select a row to view reasons, feedback and issues'],
+    ['管理员指定 · 优先','Administrator Selected · Priority'],
+    ['新人试打校准','New Scorer Trial Calibration'], ['打分一致性','Scoring Agreement'],
+    ['仅用于试打反馈，不计入常规结果','For trial feedback only; excluded from regular results'],
+    ['定向复评单列；至少 30 节不同课程才显示达标判断','Selected reviews are shown separately; status is shown after at least 30 distinct classes'],
+    ['管理员定向复评','Administrator Selected Reviews'], ['用于拉齐标准，单独展示','Shown separately for calibration'],
+    ['组配对，涉及','pairs across'], ['节不同课程。复评抽课偏向低分和问题课，结果只代表已复评课程；样本少时请看具体分歧。','distinct classes. Reviews favor low scores and issue cases, so results describe reviewed classes only. Inspect individual differences when the sample is small.'],
+    ['该范围暂无记录。','No records in this group.'], ['打分者 / 专家配对（','Scorer / Expert Pairs ('], ['节课）','classes)']
+  );
   const direct = new Map(entries);
   const replacements = entries.filter(([zh]) => zh.length >= 3).sort((a, b) => b[0].length - a[0].length);
   const shortFragments = [[' 节',' classes'],[' 条',' entries'],[' 行',' rows'],['共 ','Total '],['还差 ','Need ']];
@@ -268,7 +289,7 @@
     let node;
     while ((node = walker.nextNode())) {
       const parent = node.parentElement;
-      if (!parent || /^(SCRIPT|STYLE|TEXTAREA|NOSCRIPT)$/.test(parent.tagName) || parent.closest('[contenteditable="true"]')) continue;
+      if (!parent || /^(SCRIPT|STYLE|TEXTAREA|NOSCRIPT)$/.test(parent.tagName) || parent.closest('[contenteditable="true"],[data-no-translate]')) continue;
       const next = translate(node.nodeValue);
       if (next !== node.nodeValue) node.nodeValue = next;
     }
