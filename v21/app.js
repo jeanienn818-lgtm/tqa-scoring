@@ -34,9 +34,9 @@ let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList
 
 const S = { uid:null, email:'', member:null, isAdmin:false, isOwner:false, myName:'',
   cfg:JSON.parse(JSON.stringify(DEFAULT_CFG)), mine:[], all:[], members:[], loaded:false,
-  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:'',level:'',rubric:RUBRIC}, openRow:null, includeUnfmt:false, authMode:'login',
+  scores:Array(8).fill(null), editing:null, needName:false, renaming:false, progAxis:'scored', filter:{from:'',to:'',type:'',rev:[],level:'',rubric:RUBRIC}, openRow:null, includeUnfmt:false, authMode:'login',
   isExpert:false, tasks:[], myTasks:[], fromTask:null, cmpOpen:null, cmpData:{}, rvWeek:null,
-  trialPeriods:[], feedbacks:[], boardGroup:'regular', reviewSelected:new Set(),
+  trialPeriods:[], trialLabels:{}, trialReady:false, feedbacks:[], boardGroup:'regular', reviewSelected:new Set(),
   canSync:false, reasons:Array(8).fill(''), reasonKeys:reasonTieKeys(), issueRows:[], issuesBy:{}, syncItems:null, syncState:{}, syncCopied:false, openPair:null };
 
 /* ---------------- data layer (Supabase) ---------------- */
@@ -76,6 +76,8 @@ function makeApi(){
     startReview: id => un(sb.rpc('start_review_task_v21',{p_id:id})),
     trialPeriods: () => un(sb.from('trial_periods_v21').select('*').order('started_at')),
     setTrial: (id,enable,start) => un(sb.rpc('set_trial_v21',{p_user:id,p_enable:enable,p_start:start||null})),
+    trialLabels: () => pageAll(()=>sb.from('trial_score_labels_v21').select('score_id,is_trial').order('score_id')),
+    setTrialScore: (id,trial) => un(sb.rpc('set_trial_score_v21',{p_score:id,p_trial:trial})),
     feedbacks: () => pageAll(()=>sb.from('score_feedback_v21').select('*').order('created_at')),
     addFeedback: (id,body) => un(sb.rpc('add_score_feedback_v21',{p_score:id,p_body:body})),
     reviewCompare: id => un(sb.rpc('review_compare_v21',{p_id:id})),
@@ -288,18 +290,19 @@ async function saveIssues(scoreId, list){
 /* ---------------- my records ---------------- */
 function renderMine(){
   const box=$('#mineBody');
-
-  const current=S.mine.filter(r=>r.rubric===RUBRIC);
+  if(!S.trialReady){ $('#mineStats').innerHTML=''; box.innerHTML='<div class="notice">试打分类暂未加载；请刷新后查看记录。已保存的分数不会受影响。</div>'; return; }
+  const trials=S.mine.filter(r=>r.rubric===RUBRIC&&isTrial(r));
+  const current=S.mine.filter(r=>r.rubric===RUBRIC&&!isTrial(r));
   const td=today(); const tdN=current.filter(r=>localDay(r.createdAt)===td).length;
   const wk=addDays(td,-((new Date(td+'T00:00:00').getDay()+6)%7)); const wkN=current.filter(r=>localDay(r.createdAt)>=wk).length;
-  $('#mineStats').innerHTML=`<div class="kpi"><span class="v">${tdN}</span><span class="l">今天已打</span></div><div class="kpi"><span class="v">${wkN}</span><span class="l">本周已打</span></div><div class="kpi"><span class="v">${current.length}</span><span class="l">累计（V2.1）</span></div>`;
+  $('#mineStats').innerHTML=`<div class="kpi"><span class="v">${tdN}</span><span class="l">今天常规打分</span></div><div class="kpi"><span class="v">${wkN}</span><span class="l">本周常规打分</span></div><div class="kpi"><span class="v">${current.length}</span><span class="l">累计常规打分（V2.1）</span></div><div class="kpi"><span class="v">${trials.length}</span><span class="l">试打记录</span></div>`;
   const rows=S.mine.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.updatedAt||'').localeCompare(a.updatedAt||''));
   if(!rows.length){ box.innerHTML='<div class="empty">还没有记录。到"打分"页填写第一节课，保存后会出现在这里。</div>'; return; }
-  box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
-    rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
+  box.innerHTML=`<div class="tbl"><table><thead><tr><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>记录类型</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th><th>问题</th><th></th></tr></thead><tbody>${
+    rows.map(r=>`<tr class="click" data-id="${esc(r.id)}"><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${r.rubric!==RUBRIC?'—':isTrial(r)?'<span class="pill neu">试打</span>':'常规打分'}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
       (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td><td class="num">${issueCount(r)}</td>
       <td class="row" style="flex-wrap:nowrap">${r.rubric===RUBRIC?'<button class="btn sm" data-act="edit" type="button">编辑</button><button class="btn sm danger" data-act="del" type="button">删除</button>':'<span class="hint">历史评分仅供查看</span>'}</td></tr>
-      ${S.openRow===r.id?`<tr class="detail"><td colspan="20">${detailText(r)}${feedbackPanel(r.id,r.updatedAt,false)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
+      ${S.openRow===r.id?`<tr class="detail"><td colspan="21">${detailText(r)}${feedbackPanel(r.id,r.updatedAt,false)}</td></tr>`:''}`).join('')}</tbody></table></div>`;
   box.onclick=async e=>{
     const tr=e.target.closest('tr[data-id]'); if(!tr) return; const r=S.mine.find(x=>x.id===tr.dataset.id); if(!r) return;
     const act=e.target.closest('button')&&e.target.closest('button').dataset.act;
@@ -330,6 +333,10 @@ function feedbackPanel(scoreId, updatedAt, canWrite){
   if(canWrite) h+=`<form data-feedback="${esc(scoreId)}" class="row"><textarea name="body" maxlength="2000" required placeholder="写给打分者的具体反馈" style="min-width:240px;flex:1"></textarea><button class="btn sm primary" type="submit">发送反馈</button></form>`;
   return h+'</div>';
 }
+function trialAction(r){
+  if(r.rubric!==RUBRIC||r.import_role||!r.user_id||r.role!=='regular') return '';
+  return `<div class="row" style="margin-top:12px"><span class="pill neu">${isTrial(r)?'试打':'常规打分'}</span><button class="btn sm" type="button" data-trial-score="${esc(r.id)}" data-trial-set="${isTrial(r)?'false':'true'}">${isTrial(r)?'改为常规打分':'标记为试打'}</button><span class="hint">只调整统计分类，不改分数。</span></div>`;
+}
 /* ---------------- data for board ---------------- */
 function memberById(uid){ return S.members.find(m=>m.user_id===uid)||(S.member&&S.member.user_id===uid?S.member:null); }
 function allRecords(){
@@ -343,6 +350,7 @@ function roleOf(id){ if(id.indexOf('import:')===0) return id.slice(7); const m=m
 const ROLE_TXT={regular:'常规打分者',expert:'专家',none:'不参与对比'};
 function isTrial(r){
   if(r.rubric!==RUBRIC||r.import_role||!r.user_id||!r.createdAt) return false;
+  if(Object.prototype.hasOwnProperty.call(S.trialLabels,r.id)) return S.trialLabels[r.id];
   const at=new Date(r.createdAt).getTime();
   return S.trialPeriods.some(p=>p.user_id===r.user_id && at>=new Date(p.started_at).getTime() &&
     (!p.ended_at || at<new Date(p.ended_at).getTime()));
@@ -350,6 +358,7 @@ function isTrial(r){
 function isManualPair(p){ return S.tasks.some(t=>t.score_id===p.n.id&&t.created_by==='admin'&&t.status!=='cancelled'); }
 
 function inRange(r){ const f=S.filter; if(f.from&&(r.date||'')<f.from) return false; if(f.to&&(r.date||'')>f.to) return false; if(f.type&&r.type!==f.type) return false; if(f.level&&r.level!==f.level) return false; return true; }
+function selectedScorer(id){ return !S.filter.rev.length||S.filter.rev.includes(id); }
 function allIssues(r){
   const st=(S.issuesBy[r.id]||[]).map(x=>({ok:true,structured:true,time:x.time||'',text:x.description,root:x.root,pri:x.priority,status:x.status,sev:x.priority==='P0'}));
   return st.concat(parseIssues(r).map(x=>Object.assign(x,{pri:x.sev?'P0':'',status:''})));
@@ -403,21 +412,23 @@ function scatter(P){
 function renderBoard(){
   const box=$('#boardBody'); if(!box) return;
   if(!API) return;
+  if(!S.trialReady){ box.innerHTML='<div class="notice">试打分类暂未加载，当前统计不可用。请刷新数据。</div>'; return; }
   const source=allRecords().filter(r=>r.rubric===S.filter.rubric);
   const trialView=S.filter.rubric===RUBRIC&&S.boardGroup==='trial';
   const all=source.filter(r=>!isTrial(r));
   const trialRecords=source.filter(r=>isTrial(r));
   const ranged=(trialView?trialRecords:all).filter(inRange);
-  // reviewer filter options
-  const revIds=[...new Set((trialView?trialRecords:all).map(r=>r.rev))]; const sel=$('#q-rev'); const cur=S.filter.rev;
-  sel.innerHTML='<option value="">全部</option>'+revIds.map(id=>`<option value="${esc(id)}">${esc(revName(id))}</option>`).join(''); sel.value=cur;
-  const shown=S.filter.rev?ranged.filter(r=>r.rev===S.filter.rev):ranged;
+  const revIds=[...new Set((trialView?trialRecords:all).map(r=>r.rev))].sort((a,b)=>revName(a).localeCompare(revName(b),'zh-CN'));
+  S.filter.rev=S.filter.rev.filter(id=>revIds.includes(id));
+  $('#q-rev-summary').textContent=S.filter.rev.length?(LANG==='en'?`Selected ${S.filter.rev.length} scorers`:`已选 ${S.filter.rev.length} 人`):(LANG==='en'?'All':'全部');
+  $('#q-rev-options').innerHTML=revIds.map(id=>`<label class="scorer-choice"><input type="checkbox" value="${esc(id)}" ${S.filter.rev.includes(id)?'checked':''}><span data-no-translate>${esc(revName(id))}</span></label>`).join('')||'<span class="hint">暂无打分人</span>';
+  const shown=ranged.filter(r=>selectedScorer(r.rev));
   if(!(trialView?trialRecords:all).length){ box.innerHTML=allRecords().length?'<div class="empty">该范围暂无记录。</div>':'<div class="empty">还没有任何打分记录。在「设置」里添加成员，他们保存后会出现在这里。</div>'; return; }
   const expertPool=source.filter(r=>r.role==='expert'&&inRange(r));
   const pairPool=trialView?ranged.concat(expertPool):ranged;
   const allPairs=pairs(pairPool).filter(p=>trialView?isTrial(p.n):!isTrial(p.n));
-  const manualPairs=allPairs.filter(p=>isManualPair(p)&&(!S.filter.rev||p.n.rev===S.filter.rev||p.e.rev===S.filter.rev));
-  const P=(trialView?allPairs:allPairs.filter(p=>!isManualPair(p))).filter(p=>!S.filter.rev||p.n.rev===S.filter.rev||p.e.rev===S.filter.rev);
+  const manualPairs=allPairs.filter(p=>isManualPair(p)&&(selectedScorer(p.n.rev)||selectedScorer(p.e.rev)));
+  const P=(trialView?allPairs:allPairs.filter(p=>!isManualPair(p))).filter(p=>selectedScorer(p.n.rev)||selectedScorer(p.e.rev));
   const st=stats(P), T=S.cfg.targets||DEFAULT_CFG.targets;
   const enough=!trialView&&new Set(P.map(p=>p.c)).size>=30;
   const ok={diff:enough?Math.abs(st.diff)<=T.diff[0]:null, pass:enough?Math.round(st.pass*100)>=Math.round(T.pass[0]*100):null,
@@ -433,7 +444,7 @@ function renderBoard(){
   h+=levelCard(shown);
   h+=spreadCard(shown);
   // consistency
-  h+=`<div class="card"><h2>${trialView?'新人试打校准':'打分一致性'}<small>同一 Class ID 配对；${trialView?'仅用于试打反馈，不计入常规结果':'定向复评单列；至少 30 节不同课程才显示达标判断'}</small></h2><p class="hint">本期 ${P.length} 组配对，涉及 ${new Set(P.map(p=>p.c)).size} 节不同课程。复评抽课偏向低分和问题课，结果只代表已复评课程；样本少时请看具体分歧。</p>`;
+  h+=`<div class="card"><h2>${trialView?'试打校准':'打分一致性'}<small>同一 Class ID 配对；${trialView?'仅用于试打反馈，不计入常规结果':'定向复评单列；至少 30 节不同课程才显示达标判断'}</small></h2><p class="hint">本期 ${P.length} 组配对，涉及 ${new Set(P.map(p=>p.c)).size} 节不同课程。复评抽课偏向低分和问题课，结果只代表已复评课程；样本少时请看具体分歧。</p>`;
   if(!P.length) h+='<div class="empty">所选范围内还没有同一节课的常规打分者和专家双人记录。</div>';
   else{
     h+=`<div class="two"><div class="tbl"><table class="tgt"><thead><tr><th>指标</th><th class="num">初始阶段（暂定）</th><th class="num">稳定阶段</th><th class="num">本期</th><th>状态</th></tr></thead><tbody>
@@ -487,15 +498,21 @@ function renderBoard(){
   // all records
   const recs=shown.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   h+=`<div class="card"><div class="row"><h2>全部记录<small>点击一行查看原因、反馈和问题</small></h2><span class="spacer"></span><button class="btn sm" type="button" id="btnManualSelected">将所选记录指定复评</button><button class="btn sm" type="button" id="csv">导出当前筛选明细 CSV</button></div>
-    <div class="tbl"><table><thead><tr><th>复评</th><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
-    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td>${r.rubric===RUBRIC&&r.role==='regular'&&!r.archived?`<input type="checkbox" data-review-select="${esc(r.id)}" aria-label="选择 Class ${esc(r.classId)} 复评" ${S.reviewSelected.has(r.id)?'checked':''}>`:'—'}</td><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
-      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="20">${detailText(r)}${feedbackPanel(r.id,r.updatedAt,r.rubric===RUBRIC&&r.role==='regular')}</td></tr>`:''}`; }).join('')}</tbody></table></div>
+    <div class="tbl"><table><thead><tr><th>复评</th><th>看课日期</th><th>完课日期</th><th>版本号</th><th>评分标准</th><th>记录类型</th><th>打分人</th><th>课型</th><th>级别</th><th>Lesson</th><th>Class ID</th><th>老师</th>${SHORT.map(s=>`<th class="num">${s}</th>`).join('')}<th class="num">总分</th></tr></thead><tbody>${
+    recs.slice(0,400).map(r=>{ const k=r.rev+'/'+r.id; return `<tr class="click" data-k="${esc(k)}"><td>${r.rubric===RUBRIC&&r.role==='regular'&&!r.archived?`<input type="checkbox" data-review-select="${esc(r.id)}" aria-label="选择 Class ${esc(r.classId)} 复评" ${S.reviewSelected.has(r.id)?'checked':''}>`:'—'}</td><td class="mono">${esc(r.date)}</td><td class="mono">${esc(r.completionDate||'—')}</td><td>${esc(r.courseVersion||'—')}</td><td>${esc(rubricLabel(r.rubric))}</td><td>${r.rubric!==RUBRIC?'—':isTrial(r)?'<span class="pill neu">试打</span>':'常规打分'}</td><td>${esc(revName(r.rev))}</td><td>${esc(r.type)}</td><td>${esc(r.level)}</td><td class="mono">${esc(r.lesson)}</td><td class="mono">${esc(r.classId)}</td><td>${esc(r.teacher)}</td>${
+      (r.s||[]).map(v=>`<td class="num${v!=null&&v<6?' low':''}">${v==null?'—':v}</td>`).join('')}<td class="num${r.total!=null&&r.total<60?' low':''}">${r.archived?'<span class="pill neu">仅留档</span>':`<b>${f1(r.total)}</b>`}</td></tr>${S.openRow===k?`<tr class="detail"><td colspan="21">${detailText(r)}${trialAction(r)}${feedbackPanel(r.id,r.updatedAt,r.rubric===RUBRIC&&r.role==='regular')}</td></tr>`:''}`; }).join('')}</tbody></table></div>
     ${recs.length>400?`<p class="hint">只显示最近 400 条；导出 CSV 包含全部 ${recs.length} 条。</p>`:''}</div>`;
   box.innerHTML=h;
   const ax=$('#progAxis'); if(ax) ax.onclick=e=>{ const b=e.target.closest('button'); if(b){ S.progAxis=b.dataset.a; renderBoard(); } };
   const inc=$('#incUnf'); if(inc) inc.onchange=()=>{ S.includeUnfmt=inc.checked; renderBoard(); };
   $('#csv').onclick=()=>exportCsv(recs);
   box.querySelectorAll('input[data-review-select]').forEach(input=>input.onchange=()=>{ if(input.checked) S.reviewSelected.add(input.dataset.reviewSelect); else S.reviewSelected.delete(input.dataset.reviewSelect); });
+  box.querySelectorAll('button[data-trial-score]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;
+    try{ const trial=b.dataset.trialSet==='true'; await API.setTrialScore(b.dataset.trialScore,trial);
+      S.trialLabels[b.dataset.trialScore]=trial; await loadTasks(); S.openRow=null; renderBoard(); toast(trial?'已标记为试打':'已改为常规打分'); }
+    catch(err){ toast(errMsg(err)); b.disabled=false; }
+  });
   $('#btnManualSelected').onclick=async()=>{
     const selected=[...S.reviewSelected]; if(!selected.length){ toast('请先勾选打分记录'); return; }
     const classes=new Set(), errors=[]; let count=0; const btn=$('#btnManualSelected'); btn.disabled=true;
@@ -510,8 +527,8 @@ function levelMix(L){ const m={}; L.forEach(r=>{ if(r.level) m[r.level]=(m[r.lev
 function needsAttn(r){ return (r.total!=null&&r.total<60)||(r.s||[]).some(v=>typeof v==='number'&&v<6); }
 function progress(all){
   const scored=S.progAxis==='scored'; const key=r=>scored?(localDay(r.createdAt)||r.date||''):(r.date||'');
-  const f=S.filter; const L=all.filter(r=>{ const k=key(r); if(f.from&&k<f.from) return false; if(f.to&&k>f.to) return false; if(f.type&&r.type!==f.type) return false; if(f.rev&&r.rev!==f.rev) return false; return true; });
-  const td=today(); const tdL=all.filter(r=>localDay(r.createdAt)===td);
+  const f=S.filter; const L=all.filter(r=>{ const k=key(r); if(f.from&&k<f.from) return false; if(f.to&&k>f.to) return false; if(f.type&&r.type!==f.type) return false; if(f.level&&r.level!==f.level) return false; if(!selectedScorer(r.rev)) return false; return true; });
+  const td=today(); const tdL=L.filter(r=>localDay(r.createdAt)===td);
   let h=`<div class="card"><div class="row"><h2>每日打分进度<small>今天：${new Set(tdL.map(r=>r.rev)).size} 人在打分，已完成 ${tdL.length} 节</small></h2><span class="spacer"></span>
     <div class="seg" id="progAxis" role="group" aria-label="日期口径"><button type="button" data-a="scored" aria-pressed="${scored}">按打分日期</button><button type="button" data-a="watched" aria-pressed="${!scored}">按看课日期</button></div></div>`;
   if(!L.length) return h+'<div class="empty">所选范围内没有打分记录。</div></div>';
@@ -536,12 +553,13 @@ function copyIssues(list){
     let ok=false; try{ ok=document.execCommand('copy'); }catch(_){} ta.remove(); toast(ok?'已复制 '+rows.length+' 条':'复制失败，请改用导出 CSV'); });
 }
 function exportCsv(recs, all=false){
+  if(!S.trialReady){ toast('试打分类未加载，暂不能导出'); return; }
   const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const head=LANG==='en'
     ? ['Record ID','Observation Date','Completion Date','Course / Product Version','Scoring Date','Scorer','Role','Comparison Role','Record Group','Rubric Version','Class Type','Level','Lesson ID','Class ID','Teacher','Country','Completion Status','Camera',...DIMS.map(d=>d.n),'Weighted Total',...DIMS.map(d=>d.n+' · Reason'),'Issues','Improvement Suggestions','Highlights (legacy)','Recording URL']
     : ['记录 ID','看课日期','完课日期','版本号','打分日期','打分人','身份','对比角色','记录范围','评分标准','课程类型','级别','Lesson ID','Class ID','老师','国家','完课状态','摄像头',...DIMS.map(d=>d.n),'加权总分',...DIMS.map(d=>d.n+'·原因'),'问题','优化建议','亮点（旧）','回放链接'];
   const issTxt=r=>(S.issuesBy[r.id]||[]).map(x=>`${x.priority}｜${x.root}｜${x.time||'—'}｜${x.description}`).concat(r.issues?[r.issues]:[]).join('\n');
-  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.id,r.date,r.completionDate,r.courseVersion,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',isTrial(r)?(LANG==='en'?'New Scorer Trial':'新人试打'):(LANG==='en'?'Regular':'常规'),rubricLabel(r.rubric),r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
+  const lines=[head.map(q).join(',')].concat(recs.map(r=>[r.id,r.date,r.completionDate,r.courseVersion,localDay(r.createdAt),revName(r.rev),revKind(r.rev),ROLE_TXT[r.role]||'',isTrial(r)?(LANG==='en'?'Trial':'试打'):(LANG==='en'?'Regular':'常规'),rubricLabel(r.rubric),r.type,r.level,r.lesson,r.classId,r.teacher,r.country,r.done,r.camera,...(r.s||[]),r.total,...(r.reasons||Array(8).fill('')),issTxt(r),r.sugg,r.hl,r.url].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(all?'TQA_V2.1_全部打分明细_':'TQA_V2.1_筛选打分明细_')+today()+'.csv'; document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -592,7 +610,7 @@ function taskRow(t,isOpen){
   const late=isOpen&&t.task_date<today(); const u=safeUrl(t.url);
   return `<div class="task" data-tid="${esc(t.id)}"><div>
     <div class="meta"><span class="mono"><b>Class ${esc(t.class_id)}</b></span><span>Lesson ${esc(t.lesson||'—')}</span><span>${esc(t.type||'')} · ${esc(t.level||'')}</span><span>老师 ${esc(t.teacher||'—')}</span>${t.country?`<span>${esc(t.country)}</span>`:''}<span>看课日期 ${esc(t.date||'—')}</span>${t.completion_date?`<span>完课日期 ${esc(t.completion_date)}</span>`:''}${t.course_version?`<span>版本号 ${esc(t.course_version)}</span>`:''}${u?`<a href="${esc(u)}" target="_blank" rel="noopener">打开回放</a>`:''}</div>
-    <div class="sub">${t.created_by==='admin'?'<span class="pill good">管理员指定 · 优先</span> ':''}${t.is_trial?'<span class="pill neu">新人试打</span> ':''}分配于 ${esc(t.task_date)}（${wdOf(t.task_date)}）${late?' <span class="pill warn">已过分配日</span>':''}${t.done_at?' · 完成于 '+esc(localDay(t.done_at)):''}</div></div>
+    <div class="sub">${t.created_by==='admin'?'<span class="pill good">管理员指定 · 优先</span> ':''}${t.is_trial?'<span class="pill neu">试打</span> ':''}分配于 ${esc(t.task_date)}（${wdOf(t.task_date)}）${late?' <span class="pill warn">已过分配日</span>':''}${t.done_at?' · 完成于 '+esc(localDay(t.done_at)):''}</div></div>
     <div class="row">${isOpen?'<button class="btn sm primary" type="button" data-act="start">开始打分</button>':`<button class="btn sm" type="button" data-act="cmp">${S.cmpOpen===t.id?'收起':'查看对比'}</button>`}</div>
     ${S.cmpOpen===t.id?cmpHtml(t):''}</div>`;
 }
@@ -640,7 +658,7 @@ function adminPart(){
         <div class="row" style="margin-top:6px"><button class="btn sm primary" type="button" data-act="gen">补足今天的任务</button></div>
         <form class="row" id="addTask" novalidate style="margin-top:6px"><input type="text" id="addCls" placeholder="Class ID" style="max-width:160px" inputmode="numeric"><button class="btn sm" type="submit">指定这节课给专家</button></form></div></div>
     ${W.length?`<div class="tbl"><table><thead><tr><th>分配日</th><th>Class ID</th><th>Lesson</th><th>课型</th><th>级别</th><th>老师</th><th>打分者</th><th>抽取原因</th><th>状态</th><th></th></tr></thead><tbody>${
-      W.slice().sort((a,b)=>(a.created_by==='admin'?0:1)-(b.created_by==='admin'?0:1)||a.task_date.localeCompare(b.task_date)||(a.created_at||'').localeCompare(b.created_at||'')).map(t=>`<tr data-tid="${esc(t.id)}"><td class="mono">${esc(t.task_date.slice(5))} ${wdOf(t.task_date)}</td><td class="mono">${esc(t.class_id)}</td><td class="mono">${esc(t.lesson||'')}</td><td>${esc(t.type||'')}</td><td>${esc(t.level||'')}</td><td>${esc(t.teacher||'')}</td><td>${esc(revName(t.scorer_id||''))}${S.all.some(r=>r.id===t.score_id&&isTrial(r))?' <span class="pill neu">新人试打</span>':''}</td><td>${esc(t.reason||'')}</td>
+      W.slice().sort((a,b)=>(a.created_by==='admin'?0:1)-(b.created_by==='admin'?0:1)||a.task_date.localeCompare(b.task_date)||(a.created_at||'').localeCompare(b.created_at||'')).map(t=>`<tr data-tid="${esc(t.id)}"><td class="mono">${esc(t.task_date.slice(5))} ${wdOf(t.task_date)}</td><td class="mono">${esc(t.class_id)}</td><td class="mono">${esc(t.lesson||'')}</td><td>${esc(t.type||'')}</td><td>${esc(t.level||'')}</td><td>${esc(t.teacher||'')}</td><td>${esc(revName(t.scorer_id||''))}${S.all.some(r=>r.id===t.score_id&&isTrial(r))?' <span class="pill neu">试打</span>':''}</td><td>${esc(t.reason||'')}</td>
         <td>${t.status==='done'?'<span class="pill good">已完成</span>':t.task_date<td?'<span class="pill warn">逾期未完成</span>':'<span class="pill neu">待完成</span>'}</td>
         <td class="row" style="flex-wrap:nowrap">${t.status==='done'?`<button class="btn sm" type="button" data-act="cmp">${S.cmpOpen===t.id?'收起':'对比'}</button>`:'<button class="btn sm danger" type="button" data-act="cancel">取消</button>'}</td></tr>${S.cmpOpen===t.id?`<tr class="detail"><td colspan="10" style="white-space:normal">${cmpHtml(t)}</td></tr>`:''}`).join('')}</tbody></table></div>`:'<div class="empty">这一周还没有复评任务。</div>'}
     ${nCan?`<p class="hint">本周另有 ${nCan} 条已取消的任务，被取消的课本周不会再被抽中。</p>`:''}</div>`;
@@ -822,6 +840,9 @@ function renderSetup(){
   const box=$('#setupBody'); const c=S.cfg; const T=c.targets||DEFAULT_CFG.targets; const E=c.export||DEFAULT_CFG.export;
   const cnt={}; S.all.forEach(r=>{ if(r.user_id) cnt[r.user_id]=(cnt[r.user_id]||0)+1; });
   const roleSel=(attr,val,dis)=>`<select ${attr} ${dis?'disabled':''} aria-label="对比角色">${['regular','expert','none'].map(k=>`<option value="${k}" ${val===k?'selected':''}>${ROLE_TXT[k]}</option>`).join('')}</select>`;
+  const trialCell=m=>{ if(!S.trialReady) return '分类暂不可用'; if(!m.user_id||!m.active||m.compare_role!=='regular') return '—';
+    const open=S.trialPeriods.find(p=>p.user_id===m.user_id&&!p.ended_at);
+    return `<div class="row" style="flex-wrap:nowrap"><span class="pill ${open?'warn':'neu'}">${open?'试打中':'常规打分'}</span>${open?`<span class="mono">${esc(localDay(open.started_at))}</span>`:`<input type="date" data-trial-start value="${today()}" aria-label="试打开始日期" style="max-width:145px">`}<button class="btn sm" type="button" data-trial-action="${open?'end':'start'}">${open?'结束试打':'开始试打'}</button></div>`; };
   box.innerHTML=`<div class="card"><h2>成员与权限<small>只有名单里的邮箱能登录打分；对比角色只在后台可见</small></h2>
     <form id="addMem" class="grid" novalidate style="align-items:end">
       <div class="field"><label for="m-email">邮箱</label><input type="email" id="m-email" placeholder="同事的邮箱"></div>
@@ -830,20 +851,18 @@ function renderSetup(){
       <div class="field"><label for="m-cmp">对比角色</label>${roleSel('id="m-cmp"','regular')}</div>
       <div class="field"><button class="btn primary" type="submit">添加成员</button></div>
     </form>
-    <div class="tbl" style="margin-top:12px"><table><thead><tr><th>名字</th><th>邮箱</th><th>身份</th><th>对比角色</th><th>同步问题</th><th>状态</th><th class="num">记录数</th><th></th></tr></thead><tbody>${
+    <div class="tbl" style="margin-top:12px"><table><thead><tr><th>名字</th><th>邮箱</th><th>身份</th><th>对比角色</th><th>打分阶段</th><th>同步问题</th><th>状态</th><th class="num">记录数</th><th></th></tr></thead><tbody>${
       S.members.map(m=>{ const self=m.user_id===S.uid, lockOwner=m.is_owner&&!S.isOwner; const e=esc(m.email);
-        return `<tr data-email="${e}"><td><input type="text" data-f="name" value="${esc(m.name||'')}" placeholder="${m.is_owner?'管理员':'未填写'}" maxlength="30" style="max-width:140px" ${lockOwner?'disabled':''}></td>
+        return `<tr data-email="${e}" data-trial-user="${esc(m.user_id||'')}"><td><input type="text" data-f="name" value="${esc(m.name||'')}" placeholder="${m.is_owner?'管理员':'未填写'}" maxlength="30" style="max-width:140px" ${lockOwner?'disabled':''}></td>
         <td class="mono">${e}</td>
         <td>${m.is_owner?'管理员（所有者）':`<select data-f="is_admin" ${self?'disabled':''} aria-label="身份"><option value="0" ${m.is_admin?'':'selected'}>打分者</option><option value="1" ${m.is_admin?'selected':''}>管理员</option></select>`}</td>
         <td>${roleSel('data-f="compare_role"',m.compare_role,lockOwner)}</td>
+        <td>${trialCell(m)}</td>
         <td>${m.is_admin||m.is_owner?'<span class="hint">管理员默认可以</span>':`<label class="row" style="gap:4px"><input type="checkbox" data-f="can_sync" ${m.can_sync?'checked':''}> 可以</label>`}</td>
         <td>${!m.active?'<span class="pill bad">已停用</span>':m.user_id?'<span class="pill good">已开通</span>':'<span class="pill neu">待设置密码</span>'}</td>
         <td class="num">${m.user_id?(cnt[m.user_id]||0):0}</td>
-        <td class="row" style="flex-wrap:nowrap">${m.is_owner||self?'':`<button class="btn sm" type="button" data-act="toggle">${m.active?'停用':'启用'}</button>`}${m.user_id&&!self&&!lockOwner?'<button class="btn sm" type="button" data-act="pw">重设密码</button>':''}${!m.user_id&&!m.is_owner?'<button class="btn sm danger" type="button" data-act="del">删除</button>':''}</td></tr>${S.resetFor===m.email?`<tr class="detail"><td colspan="8"><form class="row" data-reset="${e}" novalidate style="white-space:normal"><span>给 ${esc(m.name||m.email)} 设一个新密码：</span><input type="text" data-newpw placeholder="至少 8 位" style="max-width:180px"><button class="btn sm primary" type="submit">确定</button><button class="btn sm" type="button" data-act="pwcancel">取消</button><span class="hint">设好后把新密码告诉对方，对方登录后可在"我的记录"里自己再改。</span></form></td></tr>`:''}`; }).join('')}</tbody></table></div>
-    <p class="hint">账号与成员名单和原平台共用；这里修改成员或密码会影响两个平台。勾选"同步问题"的成员可使用同步页。V2.1 的打分记录、复评任务和问题记录单独保存。</p></div>
-  <div class="card"><h2>新人试打<small>仅 V2.1 管理；试打记录在看板单独显示</small></h2><div class="tbl"><table><thead><tr><th>打分者</th><th>阶段</th><th>开始日期</th><th>操作</th></tr></thead><tbody>${
-    S.members.filter(m=>m.user_id&&m.active&&m.compare_role==='regular').map(m=>{ const open=S.trialPeriods.find(p=>p.user_id===m.user_id&&!p.ended_at);
-      return `<tr data-trial-user="${esc(m.user_id)}"><td>${esc(m.name||m.email)}</td><td>${open?'<span class="pill warn">新人试打中</span>':'常规打分'}</td><td>${open?esc(localDay(open.started_at)):`<input type="date" data-trial-start value="${today()}">`}</td><td><button class="btn sm" type="button" data-trial-action="${open?'end':'start'}">${open?'结束试打':'开始试打'}</button></td></tr>`; }).join('')}</tbody></table></div><p class="hint">开始日期可回填已打的 V2.1 课程；结束后，试打期间保存的记录仍留在试打看板。</p></div>
+        <td class="row" style="flex-wrap:nowrap">${m.is_owner||self?'':`<button class="btn sm" type="button" data-act="toggle">${m.active?'停用':'启用'}</button>`}${m.user_id&&!self&&!lockOwner?'<button class="btn sm" type="button" data-act="pw">重设密码</button>':''}${!m.user_id&&!m.is_owner?'<button class="btn sm danger" type="button" data-act="del">删除</button>':''}</td></tr>${S.resetFor===m.email?`<tr class="detail"><td colspan="9"><form class="row" data-reset="${e}" novalidate style="white-space:normal"><span>给 ${esc(m.name||m.email)} 设一个新密码：</span><input type="text" data-newpw placeholder="至少 8 位" style="max-width:180px"><button class="btn sm primary" type="submit">确定</button><button class="btn sm" type="button" data-act="pwcancel">取消</button><span class="hint">设好后把新密码告诉对方，对方登录后可在"我的记录"里自己再改。</span></form></td></tr>`:''}`; }).join('')}</tbody></table></div>
+    <p class="hint">试打只在 V2.1 生效，可回填开始日期；已打记录也可在看板逐条标记。试打记录单独展示，不计入常规统计。账号与成员名单和原平台共用；这里修改成员或密码会影响两个平台。</p></div>
   <div class="two">
     <div class="card"><h2>老师名单</h2><div class="field"><label for="s-teachers">用逗号分隔</label><input type="text" id="s-teachers" value="${esc((c.teachers||[]).join(', '))}"></div></div>
     <div class="card"><h2>问题导出字段<small>「同步问题」复制到反馈池时使用</small></h2><div class="grid">
@@ -912,6 +931,7 @@ function paintWho(){
   const w=$('#who'); w.innerHTML=''; if(!S.uid) return;
   const sp=document.createElement('span'); sp.className='nm'; sp.textContent=S.member?(S.myName||'未填写名字'):S.email; w.append(sp);
   if(S.member&&S.isAdmin&&!S.isOwner){ const t=document.createElement('span'); t.className='tag'; t.textContent='管理员'; w.append(t); }
+  if(S.member&&S.trialPeriods.some(p=>p.user_id===S.uid&&!p.ended_at)){ const t=document.createElement('span'); t.className='tag'; t.textContent='试打中'; w.append(t); }
   if(S.member&&!S.needName){ const b=document.createElement('button'); b.type='button'; b.textContent='改名'; b.onclick=()=>openGate(true); w.append(b); }
   const o=document.createElement('button'); o.type='button'; o.className='out'; o.textContent='退出'; o.onclick=logout; w.append(o);
 }
@@ -968,14 +988,17 @@ async function loadData(){
     if(S.isAdmin){ const [rows,mem,iss]=await Promise.all([API.scores(null),API.members(),API.issues(null)]); S.all=rows.map(fromDb); S.members=mem; S.mine=S.all.filter(r=>r.user_id===S.uid); indexIssues(iss); }
     else { const [rows,iss]=await Promise.all([API.scores(S.uid),API.issues(S.uid)]); S.mine=rows.map(fromDb); indexIssues(iss); }
   }catch(e){ toast(errMsg(e)); }
-  const [trial,feedback]=await Promise.allSettled([
-    (S.isAdmin||S.isExpert)?API.trialPeriods():Promise.resolve([]), API.feedbacks()
+  const [trial,labels,feedback]=await Promise.allSettled([
+    API.trialPeriods(), API.trialLabels(), API.feedbacks()
   ]);
   if(trial.status==='fulfilled') S.trialPeriods=trial.value||[];
+  if(labels.status==='fulfilled') S.trialLabels=Object.fromEntries((labels.value||[]).map(x=>[x.score_id,x.is_trial]));
+  S.trialReady=trial.status==='fulfilled'&&labels.status==='fulfilled';
+  if(!S.trialReady) toast('试打分类读取失败；请稍后刷新');
   if(feedback.status==='fulfilled') S.feedbacks=feedback.value||[];
   await loadTasks();
 }
-function clearState(){ Object.assign(S,{canSync:false,issuesBy:{},syncItems:null,syncState:{},syncCopied:false,openPair:null,uid:null,email:'',member:null,isAdmin:false,isOwner:false,isExpert:false,myName:'',mine:[],all:[],members:[],trialPeriods:[],feedbacks:[],needName:false,renaming:false,editing:null,tasks:[],myTasks:[],fromTask:null,cmpOpen:null,cmpData:{}});
+function clearState(){ Object.assign(S,{canSync:false,issuesBy:{},syncItems:null,syncState:{},openRow:null,openPair:null,uid:null,email:'',member:null,isAdmin:false,isOwner:false,isExpert:false,myName:'',mine:[],all:[],members:[],trialPeriods:[],trialLabels:{},trialReady:false,feedbacks:[],needName:false,renaming:false,editing:null,tasks:[],myTasks:[],fromTask:null,cmpOpen:null,cmpData:{}});
   document.querySelector('.tabs a[data-v="review"]').hidden=true; document.querySelector('.tabs a[data-v="sync"]').hidden=true; }
 async function logout(){ try{ await API.signOut(); }catch(_){} clearState(); resetForm(false); paintWho(); location.hash='score'; route(); }
 async function boot(){
@@ -996,13 +1019,16 @@ async function boot(){
   $('#issueRows').addEventListener('click',e=>{ const b=e.target.closest('[data-act="rm"]'); if(!b) return; readIssueRows(); S.issueRows.splice(+b.closest('.irow').dataset.k,1); renderIssueRows(); });
   $('#btnSyncRefresh').onclick=async()=>{ const b=$('#btnSyncRefresh'); b.disabled=true; await loadSync(); b.disabled=false; toast('已刷新'); };
   $('#q-level').onchange=()=>{ S.filter.level=$('#q-level').value; renderBoard(); };
-  $('#q-rubric').onchange=()=>{ S.filter.rubric=$('#q-rubric').value; S.filter.rev=''; S.reviewSelected.clear(); $('#q-group').disabled=S.filter.rubric!==RUBRIC; renderBoard(); };
-  $('#q-group').onchange=()=>{ S.boardGroup=$('#q-group').value; S.filter.rev=''; S.reviewSelected.clear(); renderBoard(); };
+  $('#q-rubric').onchange=()=>{ S.filter.rubric=$('#q-rubric').value; S.filter.rev=[]; S.reviewSelected.clear(); $('#q-group').disabled=S.filter.rubric!==RUBRIC; renderBoard(); };
+  $('#q-group').onchange=()=>{ S.boardGroup=$('#q-group').value; S.filter.rev=[]; S.reviewSelected.clear(); renderBoard(); };
   $('#f-class').addEventListener('input',checkDup);
   $('#presets').onclick=e=>{ const b=e.target.closest('button'); if(b) setPreset(b.dataset.p); };
   ['q-from','q-to'].forEach(id=>$('#'+id).addEventListener('change',()=>{ S.filter.from=$('#q-from').value; S.filter.to=$('#q-to').value; document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed','false')); renderBoard(); }));
   $('#q-type').onchange=()=>{ S.filter.type=$('#q-type').value; renderBoard(); };
-  $('#q-rev').onchange=()=>{ S.filter.rev=$('#q-rev').value; renderBoard(); };
+  $('#q-rev-options').onchange=e=>{ const input=e.target.closest('input[type="checkbox"]'); if(!input) return;
+    S.filter.rev=input.checked?[...S.filter.rev,input.value]:S.filter.rev.filter(id=>id!==input.value);
+    S.reviewSelected.clear(); renderBoard(); };
+  $('#q-rev-all').onclick=()=>{ S.filter.rev=[]; S.reviewSelected.clear(); renderBoard(); };
   $('#btnSaveCfg').onclick=saveCfg;
   $('#btnReviewRefresh').onclick=async()=>{ const b=$('#btnReviewRefresh'); b.disabled=true; await loadData(); b.disabled=false; renderReview(); toast('已刷新'); };
   $('#btnRefresh').onclick=async()=>{ const b=$('#btnRefresh'); b.disabled=true; await loadData(); b.disabled=false; renderBoard(); toast('已刷新'); };
@@ -1010,8 +1036,9 @@ async function boot(){
     if(!S.isAdmin) return;
     const b=$('#btnExportAll'); b.disabled=true;
     try{
-      const [rows,members,issues]=await Promise.all([API.scores(null),API.members(),API.issues(null)]);
+      const [rows,members,issues,periods,labels]=await Promise.all([API.scores(null),API.members(),API.issues(null),API.trialPeriods(),API.trialLabels()]);
       S.all=rows.map(fromDb); S.mine=S.all.filter(r=>r.user_id===S.uid); S.members=members; indexIssues(issues);
+      S.trialPeriods=periods||[]; S.trialLabels=Object.fromEntries((labels||[]).map(x=>[x.score_id,x.is_trial])); S.trialReady=true;
       if(!S.all.length){ toast('没有打分记录可导出'); return; }
       const records=allRecords().sort((a,c)=>(c.createdAt||c.date||'').localeCompare(a.createdAt||a.date||''));
       exportCsv(records,true); renderBoard();

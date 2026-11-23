@@ -239,8 +239,8 @@
     ['管理员指定', 'Assigned by Administrator']
   );
   entries.push(
-    ['记录范围','Record Group'], ['常规打分','Regular Scoring'], ['新人试打','New Scorer Trial'],
-    ['新人试打中','Trial in Progress'], ['开始试打','Start Trial'], ['结束试打','End Trial'],
+    ['记录范围','Record Group'], ['常规打分','Regular Scoring'], ['试打','Trial'],
+    ['试打中','Trial in Progress'], ['开始试打','Start Trial'], ['结束试打','End Trial'],
     ['开始日期','Start Date'], ['阶段','Stage'], ['操作','Action'],
     ['仅 V2.1 管理；试打记录在看板单独显示','Managed in V2.1 only; trial records appear in a separate dashboard view'],
     ['开始日期可回填已打的 V2.1 课程；结束后，试打期间保存的记录仍留在试打看板。','The start date may include earlier V2.1 scores. Scores saved during the trial remain in the trial view after it ends.'],
@@ -252,12 +252,25 @@
     ['同一课程只能指定一条打分记录','Choose one scorer record per class'], ['已指定 ','Assigned '],
     ['全部记录','All Records'], ['点击一行查看原因、反馈和问题','Select a row to view reasons, feedback and issues'],
     ['管理员指定 · 优先','Administrator Selected · Priority'],
-    ['新人试打校准','New Scorer Trial Calibration'], ['打分一致性','Scoring Agreement'],
+    ['试打校准','Trial Calibration'], ['打分一致性','Scoring Agreement'],
     ['仅用于试打反馈，不计入常规结果','For trial feedback only; excluded from regular results'],
     ['定向复评单列；至少 30 节不同课程才显示达标判断','Selected reviews are shown separately; status is shown after at least 30 distinct classes'],
     ['管理员定向复评','Administrator Selected Reviews'], ['用于拉齐标准，单独展示','Shown separately for calibration'],
     ['组配对，涉及','pairs across'], ['节不同课程。复评抽课偏向低分和问题课，结果只代表已复评课程；样本少时请看具体分歧。','distinct classes. Reviews favor low scores and issue cases, so results describe reviewed classes only. Inspect individual differences when the sample is small.'],
-    ['该范围暂无记录。','No records in this group.'], ['打分者 / 专家配对（','Scorer / Expert Pairs ('], ['节课）','classes)']
+    ['该范围暂无记录。','No records in this group.'], ['打分者 / 专家配对（','Scorer / Expert Pairs ('], ['节课）','classes)'],
+    ['今天常规打分','Regular Scores Today'], ['本周常规打分','Regular Scores This Week'],
+    ['累计常规打分（V2.1）','Total Regular Scores (V2.1)'], ['试打记录','Trial Scores'],
+    ['记录类型','Record Type'], ['打分阶段','Scoring Stage'], ['试打开始日期','Trial Start Date'],
+    ['暂无打分人','No scorers yet'],
+    ['标记为试打','Mark as Trial'], ['改为常规打分','Mark as Regular'],
+    ['已标记为试打','Marked as Trial'], ['已改为常规打分','Marked as Regular'],
+    ['只调整统计分类，不改分数。','Changes the reporting group only; scores stay the same.'],
+    ['试打只在 V2.1 生效，可回填开始日期；已打记录也可在看板逐条标记。试打记录单独展示，不计入常规统计。账号与成员名单和原平台共用；这里修改成员或密码会影响两个平台。','Trial applies to V2.1 only. Set an earlier start date or label existing scores individually in Dashboard. Trial scores appear separately and are excluded from regular statistics. Accounts and member settings are shared with the original platform.'],
+    ['试打分类暂未加载；请刷新后查看记录。已保存的分数不会受影响。','Trial labels could not be loaded. Refresh to view records. Saved scores are unaffected.'],
+    ['试打分类暂未加载，当前统计不可用。请刷新数据。','Trial labels could not be loaded. Refresh data to view statistics.'],
+    ['试打分类读取失败；请稍后刷新','Could not load trial labels. Refresh later'],
+    ['试打分类未加载，暂不能导出','Trial labels are unavailable; export is temporarily disabled'],
+    ['分类暂不可用','Classification unavailable']
   );
   const direct = new Map(entries);
   const replacements = entries.filter(([zh]) => zh.length >= 3).sort((a, b) => b[0].length - a[0].length);
